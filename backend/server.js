@@ -167,7 +167,7 @@ function auth(req, res, next) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No token' });
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'change-me-please-in-production');
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'MySuperSecretKey_2026_y9A7B8CkmN5pQr');
     next();
   } catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
@@ -181,7 +181,7 @@ app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body || {};
   const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
   const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
+  const SECRET     = process.env.JWT_SECRET     || 'MySuperSecretKey_2026_y9A7B8CkmN5pQr';
   if (username !== ADMIN_USER || password !== ADMIN_PASS) {
     return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
   }
