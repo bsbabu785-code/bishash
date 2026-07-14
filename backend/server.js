@@ -167,7 +167,7 @@ function auth(req, res, next) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No token' });
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'change-me-please-in-production');
     next();
   } catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
@@ -179,10 +179,13 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, db: mongoose.connecti
 // ---------- Auth ----------
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body || {};
-  if (username !== process.env.ADMIN_USERNAME || password !== process.env.ADMIN_PASSWORD) {
+  const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
+  const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
+  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
+  if (username !== ADMIN_USER || password !== ADMIN_PASS) {
     return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
   }
-  const token = jwt.sign({ u: username, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ u: username, role: 'admin' }, SECRET, { expiresIn: '7d' });
   res.json({ token, user: { username, role: 'admin' } });
 });
 
