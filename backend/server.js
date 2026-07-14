@@ -53,7 +53,19 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   maxAge: 86400,
 };
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: [
+    'https://bishash-v85c.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.options(/.*/, cors());
+
 app.options('*', cors(corsOptions)); // explicit preflight for all routes
 
 // Extra safety net — always attach ACAO even on early errors
@@ -196,15 +208,58 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, db: mongoose.connecti
 
 // ---------- Auth ----------
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body || {};
-  const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
-  const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
-  if (username !== ADMIN_USER || password !== ADMIN_PASS) {
-    return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+  try {
+    const { username, password } = req.body || {};
+
+    const ADMIN_USER = process.env.ADMIN_USERNAME;
+    const ADMIN_PASS = process.env.ADMIN_PASSWORD;
+    const SECRET = process.env.JWT_SECRET;
+
+    if (!SECRET) {
+      return res.status(500).json({
+        error: 'JWT_SECRET missing'
+      });
+    }
+
+    if (username !== ADMIN_USER || password !== ADMIN_PASS) {
+      return res.status(401).json({
+        error: 'ইউজারনেম বা পাসওয়ার্ড ভুল'
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        u: username,
+        role: 'admin'
+      },
+      SECRET,
+      {
+        expiresIn: '7d'
+      }
+    );
+
+    res.json({
+      token,
+      user: {
+        username,
+        role: 'admin'
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message
+    });
   }
-  const token = jwt.sign({ u: username, role: 'admin' }, SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { username, role: 'admin' } });
+});
+
+
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Backend Working Fine'
+  });
 });
 
 // ---------- Content ----------
