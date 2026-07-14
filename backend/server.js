@@ -189,7 +189,7 @@ function auth(req, res, next) {
     next();
   } catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
-
+ 
 // ---------- Health ----------
 app.get('/', (_req, res) => res.json({ ok: true, name: 'Bishash Halua API' }));
 app.get('/api/health', (_req, res) => res.json({ ok: true, db: mongoose.connection.readyState === 1 }));
