@@ -1,77 +1,26 @@
-# বিশ্বাস হালুয়া — Full System
+# বিশ্বাস হালুয়া — ব্যাকএন্ড ডিপ্লয়মেন্ট নির্দেশিকা
 
-তিনটি অংশ:
-- `frontend/` — ল্যান্ডিং পেজ (`index.html`)
-- `admin_panel/` — এডমিন প্যানেল (`admin.html`)
-- `backend/` — Node/Express + MongoDB + Cloudinary API
-- `apps_script/` — Gmail নোটিফিকেশনের জন্য Google Apps Script
+## সমস্যা কী ছিল?
+1. **CORS error** — Render-এ পুরানো `server.js` deploy ছিল, তাই `Access-Control-Allow-Origin` header পাঠাচ্ছিল না।
+2. **JWT_SECRET = "change-me-please-in-production"** — এটা শুধু placeholder। প্রোডাকশনে অবশ্যই strong random string দিতে হবে। এই zip-এর `.env.example`-এ ইতিমধ্যেই একটি ৯৬-অক্ষরের strong secret দেওয়া আছে।
+3. **সব ডেটা MongoDB-তে** — Backend শুরু থেকেই MongoDB (Mongoose) ব্যবহার করে; localStorage-এ কোনো ডেটা রাখা হয় না। শুধু নিশ্চিত করতে হবে `MONGODB_URI` env variable সঠিকভাবে সেট আছে।
 
-## ১. Backend (Render)
+## Render-এ কী করতে হবে (গুরুত্বপূর্ণ)
 
-```
-cd backend
-npm install
-cp .env.example .env    # সব ভ্যারিয়েবল পূরণ করুন
-npm start
-```
+1. Render Dashboard → আপনার service → **Environment** ট্যাব খুলুন।
+2. নিচের সব key-value যোগ করুন (`.env.example` থেকে কপি করুন):
+   - `MONGODB_URI` = `mongodb+srv://bsbabu785_db_user:FV0VRCoapFz5nJqe@cluster0.rpv7p77.mongodb.net/bishash?appName=Cluster0`
+   - `ADMIN_USERNAME` = `admin`
+   - `ADMIN_PASSWORD` = `admin123`
+   - `JWT_SECRET` = (`.env.example`-এর long string)
+   - `ALLOWED_ORIGINS` = খালি রাখুন (সব origin allow হবে) অথবা `https://bishash-v85c.vercel.app`
+   - Cloudinary keys (যদি image upload লাগে)
+3. **Manual Deploy → Deploy latest commit** (অথবা এই নতুন `server.js` push করুন)।
+4. Deploy শেষ হলে test: `https://bishash-backend.onrender.com/api/health` → `{"ok":true,"db":true}` দেখাবে।
 
-### Render deploy
-1. GitHub-এ `backend/` push করুন
-2. Render → New Web Service → Build: `npm install`, Start: `npm start`
-3. Environment tab-এ `.env.example`-এর সব KEY বসান
-4. URL কপি করুন (যেমন `https://bishash-backend.onrender.com`)
+## MongoDB Atlas-এ Network Access
+Atlas → Network Access → **Add IP Address → Allow Access from Anywhere (0.0.0.0/0)** — এটা করা না থাকলে Render থেকে DB connect হবে না।
 
-## ২. Apps Script (ইমেইল নোটিফিকেশন)
-
-1. https://script.google.com → New project
-2. `apps_script/Code.gs`-এর কনটেন্ট পেস্ট করুন
-3. Deploy → New deployment → Type: Web app
-   - Execute as: **আপনি (bsbabu785@gmail.com)**
-   - Who has access: **Anyone**
-4. `/exec` URL কপি করে backend `.env` → `APPS_SCRIPT_URL` এ বসান
-5. Render → Environment এ একই URL সেট করুন
-
-অর্ডার এলে বিস্তারিতসহ ইমেইল যাবে `bsbabu785@gmail.com` এ।
-
-## ৩. Frontend (Vercel)
-
-1. `frontend/index.html` খুলে শেষে থাকা script-এ:
-   ```js
-   const API = 'https://bishash-backend.onrender.com';   // Render URL বসান
-   ```
-2. Vercel → New Project → `frontend/` folder deploy
-3. `vercel.json` অটো cache header দিবে
-
-## ৪. Admin Panel (Vercel — আলাদা প্রজেক্ট)
-
-1. `admin_panel/` folder Vercel-এ deploy করুন
-2. প্রথম লগইন-এর পর সেটিংস → **Backend API URL** বসান (Render URL)
-3. ডিফল্ট লগইন: `admin` / `admin123` (backend `.env` থেকে পরিবর্তন করুন)
-
-## ফিচার ম্যাপ
-
-| এডমিন সেকশন | কী কী করে |
-|---|---|
-| ড্যাশবোর্ড | মোট/আজ/pending/confirmed/delivered অর্ডার, সাপ্তাহিক chart, best selling |
-| অর্ডার | সব অর্ডার list, search/filter, edit/delete, স্ট্যাটাস পরিবর্তন |
-| পণ্য | পণ্য যোগ/এডিট/ডিলিট, Cloudinary ইমেজ, স্টক, price |
-| গ্রাহক | অর্ডার থেকে aggregated |
-| কুপন | percent/flat কুপন CRUD, `/api/coupons/validate` public |
-| পেমেন্ট | bKash/Nagad নম্বর, পেমেন্ট মেথড অনুযায়ী রিপোর্ট |
-| রিভিউ | Cloudinary ইমেজসহ রিভিউ CRUD → index.html-এ show |
-| ওয়েবসাইট কনটেন্ট | Hero টেক্স+ইমেজ, **YouTube on/off toggle**, benefits, contact, social, delivery |
-| সেটিংস | Backend API URL কনফিগ |
-
-## গুরুত্বপূর্ণ
-
-- সব ইমেজ Cloudinary-তে যাবে (এডমিন থেকে আপলোড → automatic)
-- সব ডেটা MongoDB Atlas-এ থাকবে
-- অর্ডার এলে দুই জায়গায় saved হবে: (১) MongoDB (২) `bsbabu785@gmail.com` এ ইমেইল
-- ইউটিউব সেকশন এডমিন থেকে on/off করা যাবে
-- ল্যান্ডিং পেজ preconnect + Cloudinary CDN + fonts optimized → দ্রুত লোড
-
-## সিকিউরিটি
-
-- আপলোড করা `.env` এর সব সিক্রেট চ্যাটে expose হয়েছে — Atlas password ও Cloudinary secret এখনই regenerate করুন।
-- `.env` কখনো git-এ push করবেন না।
-- Production-এ `ADMIN_PASSWORD` ও `JWT_SECRET` অবশ্যই strong random string দিন।
+## Login credentials
+- Username: `admin`
+- Password: `admin123`

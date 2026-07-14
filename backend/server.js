@@ -38,16 +38,34 @@ const fetch = require('node-fetch');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-// ---------- CORS ----------
+// ---------- CORS (bulletproof: reflect any origin, handle preflight) ----------
 const ALLOWED = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-app.use(cors({
+const corsOptions = {
   origin: (origin, cb) => {
+    // Allow tools (curl/postman) with no Origin, and reflect any browser origin.
     if (!origin) return cb(null, true);
-    if (ALLOWED.length === 0 || ALLOWED.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS blocked: ' + origin));
+    if (ALLOWED.length === 0) return cb(null, true); // permissive by default
+    if (ALLOWED.includes(origin)) return cb(null, true);
+    return cb(null, false);
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  maxAge: 86400,
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // explicit preflight for all routes
+
+// Extra safety net — always attach ACAO even on early errors
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (ALLOWED.length === 0 || ALLOWED.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  next();
+});
 
 // ---------- Cloudinary ----------
 cloudinary.config({
@@ -167,7 +185,7 @@ function auth(req, res, next) {
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No token' });
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'MySuperSecretKey_2026_y9A7B8CkmN5pQr');
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'change-me-please-in-production');
     next();
   } catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
@@ -181,7 +199,7 @@ app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body || {};
   const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
   const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-  const SECRET     = process.env.JWT_SECRET     || 'MySuperSecretKey_2026_y9A7B8CkmN5pQr';
+  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
   if (username !== ADMIN_USER || password !== ADMIN_PASS) {
     return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
   }
