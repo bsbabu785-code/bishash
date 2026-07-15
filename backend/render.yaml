@@ -3,6 +3,7 @@ services:
     name: bishash-backend
     env: node
     plan: free
+    rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /api/health

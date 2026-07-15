@@ -1,16 +1,6 @@
 /*
- * Bishash Halua — Backend API (fixed)
+ * Bishash Halua — Backend API
  * Stack: Express + MongoDB (Mongoose) + Cloudinary + JWT + Apps Script (email)
- *
- * Fixes vs previous version:
- *   - Permissive CORS by default (any origin) when ALLOWED_ORIGINS is empty
- *     — this removes the "Failed to fetch" caused by CORS blocks.
- *   - Explicit preflight handler for every route (app.options('*'))
- *   - Login no longer requires MongoDB — you can log in even if DB is down
- *   - Better error handling + JSON error responses (never HTML)
- *   - Global unhandled-rejection / uncaught-exception logging
- *   - Health endpoints (/, /api/health) always respond
- *   - Uses global fetch (Node 18+); node-fetch fallback for older Node
  */
 
 require('dotenv').config();
@@ -27,6 +17,7 @@ const fetchFn = (typeof fetch !== 'undefined')
   : ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
+app.set('trust proxy', 1); // Render sits behind a proxy
 app.use(express.json({ limit: '10mb' }));
 
 // ---------- CORS (permissive if ALLOWED_ORIGINS is empty) ----------
@@ -35,14 +26,10 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
 
 const corsOptions = {
   origin: (origin, cb) => {
-    // no origin (curl, server-to-server, mobile webview) → allow
-    if (!origin) return cb(null, true);
-    // no allow-list configured → allow everything (dev / open API)
-    if (ALLOWED.length === 0) return cb(null, true);
+    if (!origin) return cb(null, true); // curl, server-to-server, mobile webview
+    if (ALLOWED.length === 0) return cb(null, true); // no allow-list configured
     if (ALLOWED.includes(origin)) return cb(null, true);
-    // don't throw — return false so browser gets a normal CORS block
-    // (throwing here yields a 500 which triggers "Failed to fetch")
-    return cb(null, false);
+    return cb(null, false); // return false, don't throw, so it's not a 500
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -61,16 +48,13 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 *
 
 // ---------- MongoDB (non-fatal on failure) ----------
 mongoose.set('strictQuery', true);
-let dbReady = false;
 if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 })
-    .then(() => { dbReady = true; console.log('✅ MongoDB connected'); })
+    .then(() => console.log('✅ MongoDB connected'))
     .catch(err => console.error('❌ MongoDB error:', err.message));
 } else {
   console.warn('⚠️  MONGODB_URI not set — DB features disabled');
 }
-mongoose.connection.on('connected',    () => { dbReady = true;  });
-mongoose.connection.on('disconnected', () => { dbReady = false; });
 
 function requireDb(_req, res, next) {
   if (mongoose.connection.readyState !== 1) {
@@ -188,19 +172,19 @@ async function getOrCreateContent() {
       youtube: { enabled: true, videoId: '', title: 'বিশ্বাস হালুয়া তৈরির প্রক্রিয়া', subtitle: 'ভিডিওতে দেখুন কীভাবে আমরা হালুয়া তৈরি করি।' },
       benefits: [
         { icon: '✅', text: '১০০% খাঁটি ও প্রাকৃতিক উপাদান' },
-        { icon: '✅', text: 'কোনো প্রিজারভেটিভ নেই' },
-        { icon: '✅', text: 'ঘরোয়া রেসিপিতে তৈরি' },
+        { icon: '🚫', text: 'কোনো প্রিজারভেটিভ নেই' },
+        { icon: '🏠', text: 'ঘরোয়া পদ্ধতিতে তৈরি' },
       ],
-      productInfo: { name: 'বিশ্বাস হালুয়া', description: 'খাঁটি ঘি ও বাদামে তৈরি বিশেষ হালুয়া।' },
-      contact: { phone: '01716221962', whatsapp: '8801716221962', email: 'bsbabu785@gmail.com', address: 'ঢাকা, বাংলাদেশ' },
+      productInfo: { name: 'বিশ্বাস হালুয়া', description: 'সুস্বাদু ও পুষ্টিকর ঘরোয়া হালুয়া।' },
+      contact: { phone: '', whatsapp: '', email: '', address: '' },
       social: { facebook: '', instagram: '', youtube: '', tiktok: '' },
-      payments: { bkash: '01716221962', nagad: '01332663380' },
+      payments: { bkash: '', nagad: '' },
       delivery: { insideDhaka: 70, outsideDhaka: 130 },
     });
   }
   return c;
 }
-app.get('/api/content', requireDb, async (_req, res, next) => {
+app.get('/api/content', async (_req, res, next) => {
   try { res.json(await getOrCreateContent()); } catch (e) { next(e); }
 });
 app.put('/api/content', auth, requireDb, async (req, res, next) => {
@@ -285,7 +269,6 @@ app.post('/api/orders', requireDb, async (req, res, next) => {
     const payload = { ...req.body, orderId: generateOrderId() };
     const order = await Order.create(payload);
 
-    // Fire-and-forget Apps Script email
     if (process.env.APPS_SCRIPT_URL) {
       Promise.resolve(fetchFn(process.env.APPS_SCRIPT_URL, {
         method: 'POST',
