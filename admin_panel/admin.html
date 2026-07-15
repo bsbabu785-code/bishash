@@ -646,6 +646,16 @@ tbody tr:hover{background:#fdf9f0}
 // ---------- Config ----------
 const DEFAULT_API = 'https://bishash-1.onrender.com';
 let API = localStorage.getItem('bh_api') || DEFAULT_API;
+
+// One-time migration: a previous/broken backend URL may still be saved in
+// this browser's localStorage from testing (e.g. bishash-backend.onrender.com,
+// which doesn't have CORS configured). Force it back to the working default.
+const KNOWN_BAD_APIS = ['https://bishash-backend.onrender.com'];
+if (KNOWN_BAD_APIS.includes(API)) {
+  API = DEFAULT_API;
+  localStorage.setItem('bh_api', API);
+}
+
 let TOKEN = localStorage.getItem('bh_token') || '';
 
 // ---------- Helpers ----------  
@@ -970,7 +980,7 @@ async function saveContent(){
 
 // ---------- Settings ----------
 function loadSettings(){ $('apiUrlInp').value = API; }
-function saveApiUrl(){ API=$('apiUrlInp').value.trim().replace(/\/$/,''); localStorage.setItem('bh_api',API); toast('https://bishash-1.onrender.com'); }
+function saveApiUrl(){ API=$('apiUrlInp').value.trim().replace(/\/$/,''); localStorage.setItem('bh_api',API); toast('API URL সেভ'); }
 
 // ---------- Init ----------
 if (TOKEN) showApp();
