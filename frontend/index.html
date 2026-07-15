@@ -2019,11 +2019,11 @@
        const allShipping = $$('input[name="shipping"]');
        if(allShipping[0] && c.delivery.insideDhaka){
          allShipping[0].value = c.delivery.insideDhaka;
-         const lbl = allShipping[0].closest('label'); if(lbl){ const s=lbl.querySelector('span:last-child'); if(s) s.textContent='৳'+c.delivery.insideDhaka; }
+         const row = allShipping[0].closest('.row'); if(row){ const s=row.querySelector('span:last-child'); if(s) s.textContent='৳'+c.delivery.insideDhaka; }
        }
        if(allShipping[1] && c.delivery.outsideDhaka){
          allShipping[1].value = c.delivery.outsideDhaka;
-         const lbl = allShipping[1].closest('label'); if(lbl){ const s=lbl.querySelector('span:last-child'); if(s) s.textContent='৳'+c.delivery.outsideDhaka; }
+         const row = allShipping[1].closest('.row'); if(row){ const s=row.querySelector('span:last-child'); if(s) s.textContent='৳'+c.delivery.outsideDhaka; }
        }
        if(typeof updateOrderSummary==='function') updateOrderSummary();
      }
