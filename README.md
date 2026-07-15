@@ -39,7 +39,7 @@ PORT=10000ing দিতে হবে। এই zip-এর `.env.example`-এ ই
    - `ALLOWED_ORIGINS` = খালি রাখুন (সব origin allow হবে) অথবা `https://bishash-v85c.vercel.app`
    - Cloudinary keys (যদি image upload লাগে)
 3. **Manual Deploy → Deploy latest commit** (অথবা এই নতুন `server.js` push করুন)।
-4. Deploy শেষ হলে test: `https://bishash-backend.onrender.com/api/health` → `{"ok":true,"db":true}` দেখাবে।
+4. Deploy শেষ হলে test: `https://bishash-1.onrender.com/api/health` → `{"ok":true,"db":true}` দেখাবে।
 
 ## MongoDB Atlas-এ Network Access
 Atlas → Network Access → **Add IP Address → Allow Access from Anywhere (0.0.0.0/0)** — এটা করা না থাকলে Render থেকে DB connect হবে না।

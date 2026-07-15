@@ -531,7 +531,7 @@ tbody tr:hover{background:#fdf9f0}
           <h3 style="color:var(--maroon-dark);margin-bottom:14px">API সংযোগ</h3>
           <div class="field">
             <label>Backend API URL</label>
-            <input id="apiUrlInp" placeholder="https://bishash-backend.onrender.com">
+            <input id="apiUrlInp" placeholder="https://bishash-1.onrender.com">
           </div>
           <button class="btn btn-primary" onclick="saveApiUrl()"><i class="fa-solid fa-save"></i>সেভ</button>
           <div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Render/সার্ভারে ব্যাকএন্ড লাইভ করার পর URL এখানে বসান।</div>
@@ -644,7 +644,7 @@ tbody tr:hover{background:#fdf9f0}
    ================================================================ */
 
 // ---------- Config ----------
-const DEFAULT_API = 'https://bishash-backend.onrender.com';
+const DEFAULT_API = 'https://bishash-1.onrender.com';
 let API = localStorage.getItem('bh_api') || DEFAULT_API;
 let TOKEN = localStorage.getItem('bh_token') || '';
 
