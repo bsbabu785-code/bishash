@@ -1836,9 +1836,17 @@
   const $ = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
 
-  // Session id for incomplete order tracking
-  let SID = localStorage.getItem('bh_sid');
-  if(!SID){ SID = 'S' + Date.now() + Math.random().toString(36).slice(2,8); localStorage.setItem('bh_sid', SID); }
+  // Session id for incomplete order tracking.
+  // Wrapped in try/catch: some in-app browsers (Facebook/Instagram webview, strict privacy modes)
+  // throw when touching localStorage, which would otherwise silently kill this ENTIRE script
+  // (including incomplete-order capture) with no visible error for the customer or admin.
+  let SID;
+  try{
+    SID = localStorage.getItem('bh_sid');
+    if(!SID){ SID = 'S' + Date.now() + Math.random().toString(36).slice(2,8); localStorage.setItem('bh_sid', SID); }
+  }catch(e){
+    SID = 'S' + Date.now() + Math.random().toString(36).slice(2,8); // in-memory fallback, no persistence across reloads
+  }
 
   async function j(path){ try{ const r=await fetch(API+path,{cache:'no-store'}); if(!r.ok) throw 0; return await r.json(); }catch(e){ return null } }
 
@@ -2162,16 +2170,23 @@
     };
   }
 
-  function sendIncomplete(body){
+  function sendIncomplete(body, isRetry){
     // keepalive:true keeps the request alive even if the page is being navigated away from/closed.
     // NOTE: this app's frontend and API are on different domains (cross-origin). We intentionally do NOT
     // use navigator.sendBeacon here — sendBeacon with a JSON body triggers a CORS preflight, and when that
     // preflight is still in flight at the moment the page is torn down, the browser silently drops the
     // beacon with no error at all. fetch(..., {keepalive:true}) is the correct cross-origin-safe replacement:
     // it completes the CORS preflight + POST as a detached background request even past page unload.
-    try{
-      fetch(API+'/api/incomplete-orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), keepalive:true}).catch(()=>{});
-    }catch(e){}
+    fetch(API+'/api/incomplete-orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), keepalive:true})
+      .then(r=>{
+        if(!r.ok){ console.warn('[incomplete-order] server rejected save, status', r.status); }
+      })
+      .catch(err=>{
+        console.warn('[incomplete-order] save failed:', err && err.message);
+        // one retry after a short delay — covers a slow/cold-starting backend (e.g. Render free tier
+        // spinning up) or a transient network blip, without retrying forever
+        if(!isRetry) setTimeout(()=>sendIncomplete(body, true), 3000);
+      });
   }
 
   function scheduleIncompleteSave(){
@@ -2201,6 +2216,7 @@
     ['custName','custAddress','custMobile'].forEach(id=>{
       const el = document.getElementById(id);
       if(el){ el.addEventListener('input', scheduleIncompleteSave); el.addEventListener('blur', scheduleIncompleteSave); }
+      else console.warn('[incomplete-order] form field #'+id+' not found on this page — capture disabled for it');
     });
     document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushIncompleteSave(); });
     window.addEventListener('pagehide', flushIncompleteSave);
