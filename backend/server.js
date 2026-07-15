@@ -29,6 +29,8 @@ const corsOptions = {
     if (!origin) return cb(null, true); // curl, server-to-server, mobile webview
     if (ALLOWED.length === 0) return cb(null, true); // no allow-list configured
     if (ALLOWED.includes(origin)) return cb(null, true);
+    // Log so it's obvious in Render logs *why* a login/order request failed
+    console.warn(`⚠️  CORS blocked origin "${origin}". Add it to ALLOWED_ORIGINS if this is your real frontend/admin panel domain.`);
     return cb(null, false); // return false, don't throw, so it's not a 500
   },
   credentials: true,
@@ -373,4 +375,9 @@ process.on('uncaughtException',  e => console.error('uncaughtException:',  e));
 
 // ---------- Start ----------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log('🚀 Bishash API on :' + PORT));
+app.listen(PORT, () => {
+  console.log('🚀 Bishash API on :' + PORT);
+  console.log('   ALLOWED_ORIGINS =', ALLOWED.length ? ALLOWED.join(', ') : '(none set — all origins allowed)');
+  console.log('   ADMIN_USERNAME set =', !!process.env.ADMIN_USERNAME, '| ADMIN_PASSWORD set =', !!process.env.ADMIN_PASSWORD);
+  console.log('   MONGODB_URI set =', !!process.env.MONGODB_URI);
+});
