@@ -1822,10 +1822,13 @@
      ========================================================== -->
 <script>
 (function(){
-  // ⚠️ ব্যাকএন্ড URL এখানে বসান (Render/সার্ভার live URL):
   const API = window.BISHASH_API || 'https://bishash-1.onrender.com';
   const $ = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+
+  // Session id for incomplete order tracking
+  let SID = localStorage.getItem('bh_sid');
+  if(!SID){ SID = 'S' + Date.now() + Math.random().toString(36).slice(2,8); localStorage.setItem('bh_sid', SID); }
 
   async function j(path){ try{ const r=await fetch(API+path,{cache:'no-store'}); if(!r.ok) throw 0; return await r.json(); }catch(e){ return null } }
 
@@ -1837,20 +1840,11 @@
     // Hero
     if(c.hero){
       const h1 = $('.hero-copy h1');
-      if(h1 && (c.hero.title || c.hero.highlight)){
-        h1.innerHTML = (c.hero.title||'') + ' <span class="highlight">' + (c.hero.highlight||'') + '</span>';
-      }
-      const p = $('.hero-copy p');
-      if(p && c.hero.subtitle) p.textContent = c.hero.subtitle;
-      if(c.hero.image){
-        const heroImg = $('.hero-visual .frame img');
-        if(heroImg) heroImg.src = c.hero.image;
-      }
+      if(h1 && (c.hero.title || c.hero.highlight)) h1.innerHTML = (c.hero.title||'') + ' <span class="highlight">' + (c.hero.highlight||'') + '</span>';
+      const p = $('.hero-copy p'); if(p && c.hero.subtitle) p.textContent = c.hero.subtitle;
+      if(c.hero.image){ const heroImg = $('.hero-visual .frame img'); if(heroImg) heroImg.src = c.hero.image; }
       const cta = $('.hero-copy .btn');
-      if(cta && c.hero.ctaText) {
-        const span = cta.querySelector('span') || cta;
-        if(!cta.querySelector('span')) cta.textContent = c.hero.ctaText;
-      }
+      if(cta && c.hero.ctaText && !cta.querySelector('span')) cta.textContent = c.hero.ctaText;
     }
 
     // YouTube toggle + video
@@ -1866,6 +1860,21 @@
       }
     }
 
+    // Section titles (best-effort text swap by data-bh-section or fallback selectors)
+    if(c.sections){
+      const setBy = (sel, text) => { const el=$(sel); if(el && text) el.textContent = text; };
+      setBy('[data-bh="benefitsTitle"]', c.sections.benefitsTitle);
+      setBy('[data-bh="benefitsSubtitle"]', c.sections.benefitsSubtitle);
+      setBy('[data-bh="reviewsTitle"]', c.sections.reviewsTitle);
+      setBy('[data-bh="reviewsSubtitle"]', c.sections.reviewsSubtitle);
+      setBy('[data-bh="orderTitle"]', c.sections.orderTitle);
+      setBy('[data-bh="orderSubtitle"]', c.sections.orderSubtitle);
+      setBy('[data-bh="aboutTitle"]', c.sections.aboutTitle);
+      setBy('[data-bh="aboutText"]', c.sections.aboutText);
+      setBy('[data-bh="footerText"]', c.sections.footerText);
+      const fc = document.querySelector('.footer-copy'); if(fc && c.sections.footerText) fc.textContent = c.sections.footerText;
+    }
+
     // Payment numbers
     if(c.payments){
       const bk = document.getElementById('bkashNumTxt'); if(bk && c.payments.bkash) bk.textContent = c.payments.bkash;
@@ -1876,8 +1885,8 @@
     if(c.delivery){
       const insideR = document.querySelector('input[name="shipping"][value="70"]');
       const outsideR = document.querySelector('input[name="shipping"][value="130"]');
-      if(insideR){ insideR.value = c.delivery.insideDhaka; insideR.parentElement.parentElement.querySelector('span:last-child').textContent = '৳'+c.delivery.insideDhaka; }
-      if(outsideR){ outsideR.value = c.delivery.outsideDhaka; outsideR.parentElement.parentElement.querySelector('span:last-child').textContent = '৳'+c.delivery.outsideDhaka; }
+      if(insideR){ insideR.value = c.delivery.insideDhaka; const s=insideR.parentElement.parentElement.querySelector('span:last-child'); if(s) s.textContent = '৳'+c.delivery.insideDhaka; }
+      if(outsideR){ outsideR.value = c.delivery.outsideDhaka; const s=outsideR.parentElement.parentElement.querySelector('span:last-child'); if(s) s.textContent = '৳'+c.delivery.outsideDhaka; }
       if(typeof updateOrderSummary==='function') updateOrderSummary();
     }
 
@@ -1894,9 +1903,29 @@
         Object.entries(map).forEach(([k,dom])=>{ if(h.includes(dom) && c.social[k]) a.href = c.social[k]; });
       });
     }
+
+    // Google Analytics + FB Pixel (from admin)
+    injectTracking(c.tracking||{});
   }
 
-  // ---------- Dynamic products (optional override of prices) ----------
+  // ---------- Tracking scripts ----------
+  function injectTracking(t){
+    if(t.gaEnabled && t.gaId && !window.__ga_loaded){
+      window.__ga_loaded = true;
+      const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(t.gaId);
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments)} window.gtag = gtag;
+      gtag('js', new Date()); gtag('config', t.gaId);
+    }
+    if(t.fbPixelId && !window.__fbq_loaded){
+      window.__fbq_loaded = true;
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', t.fbPixelId); fbq('track', 'PageView');
+    }
+  }
+
+  // ---------- Dynamic products ----------
   async function applyProducts(){
     const list = await j('/api/products'); if(!list||!list.length) return;
     list.forEach(p=>{
@@ -1919,10 +1948,82 @@
     }
   }
 
+  // ---------- Incomplete order capture ----------
+  let __incTimer = null;
+  function scheduleIncompleteSave(){
+    clearTimeout(__incTimer);
+    __incTimer = setTimeout(async ()=>{
+      const name = (($('#custName')||{}).value||'').trim();
+      const address = (($('#custAddress')||{}).value||'').trim();
+      const mobile = (($('#custMobile')||{}).value||'').trim();
+      // save only if user filled at least name+mobile OR mobile alone
+      if(!mobile && !name) return;
+      const w = window.selectedWeight || '1000';
+      const qty = (window.qtyByWeight||{})[w] || 1;
+      const WLABELS = window.WEIGHT_LABELS || {'500':'500 গ্রাম','1000':'1 কেজি'};
+      const body = {
+        sessionId: SID,
+        customerName: name, phone: mobile, address: address,
+        weight: WLABELS[w] || w, quantity: qty,
+        paymentMethod: window.selectedPayment || 'cod',
+      };
+      try{
+        await fetch(API+'/api/incomplete-orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+      }catch(e){}
+    }, 1200);
+  }
+  function hookIncompleteCapture(){
+    ['custName','custAddress','custMobile'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el){ el.addEventListener('input', scheduleIncompleteSave); el.addEventListener('blur', scheduleIncompleteSave); }
+    });
+  }
+
+  // ---------- Order Tracking Widget ----------
+  function injectTrackingWidget(){
+    if(document.getElementById('bhTrackBox')) return;
+    const box = document.createElement('div');
+    box.id = 'bhTrackBox';
+    box.style.cssText = 'max-width:560px;margin:30px auto 20px;padding:18px;background:#fff;border:1px solid #ecdfd0;border-radius:8px;font-family:inherit;text-align:center;box-shadow:0 4px 14px rgba(168,80,26,.08)';
+    box.innerHTML = `
+      <h3 style="color:#5c2e0f;margin-bottom:6px;font-size:1.1rem">📦 অর্ডার ট্র্যাক করুন</h3>
+      <p style="color:#8a6f5c;font-size:.85rem;margin-bottom:12px">আপনার Order ID দিয়ে বর্তমান অবস্থা দেখুন</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <input id="bhTrkInp" placeholder="Order ID (BH...)" style="flex:1;min-width:180px;padding:10px 12px;border:1px solid #ecdfd0;border-radius:6px;background:#faf6ee;font-family:inherit">
+        <button id="bhTrkBtn" style="padding:10px 20px;background:#a8501a;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-family:inherit">ট্র্যাক করুন</button>
+      </div>
+      <div id="bhTrkOut" style="margin-top:14px;text-align:left"></div>
+    `;
+    // Prefer inserting before footer
+    const footer = document.querySelector('footer');
+    if(footer && footer.parentNode) footer.parentNode.insertBefore(box, footer);
+    else document.body.appendChild(box);
+
+    document.getElementById('bhTrkBtn').onclick = async ()=>{
+      const id = document.getElementById('bhTrkInp').value.trim();
+      const out = document.getElementById('bhTrkOut');
+      if(!id){ out.innerHTML = '<div style="color:#e2352f">Order ID দিন</div>'; return; }
+      out.innerHTML = 'লোড হচ্ছে...';
+      try{
+        const r = await fetch(API + '/api/track/' + encodeURIComponent(id));
+        const d = await r.json();
+        if(!r.ok) throw new Error(d.error||'পাওয়া যায়নি');
+        const events = (d.tracking||[]).map(t=>{
+          const dt = new Date(t.at).toLocaleString('en-GB');
+          return `<div style="padding:8px 0;border-bottom:1px solid #f0e5d3"><b style="color:#a8501a">${t.status}</b> ${t.note?'— '+t.note:''}<div style="font-size:.75rem;color:#8a6f5c">${dt}</div></div>`;
+        }).join('') || '<div style="color:#8a6f5c">হিস্ট্রি নেই</div>';
+        out.innerHTML = `
+          <div style="padding:10px;background:#fdf6ec;border-radius:6px;margin-bottom:10px">
+            <b>${d.orderId}</b> — ${d.customerName||''}<br>
+            <span style="font-size:.85rem">বর্তমান স্ট্যাটাস: <b style="color:#a8501a">${d.status}</b></span>
+          </div>${events}`;
+      }catch(e){ out.innerHTML = '<div style="color:#e2352f">'+e.message+'</div>'; }
+    };
+  }
+
   // ---------- Override placeOrder to POST to backend ----------
   function hookOrderSubmit(){
     const btn = document.getElementById('placeOrderBtn'); if(!btn) return;
-    const original = window.placeOrder;
     window.placeOrder = async function(evt){
       evt && evt.preventDefault && evt.preventDefault();
       const name = ($('#custName')||{}).value?.trim();
@@ -1930,14 +2031,13 @@
       const mobile = ($('#custMobile')||{}).value?.trim();
       if(!name||!address||!mobile){ alert('অনুগ্রহ করে নাম, ঠিকানা ও মোবাইল নম্বর পূরণ করুন।'); return false; }
       if(!/^01[3-9]\d{8}$/.test(mobile)){ alert('সঠিক 11 সংখ্যার মোবাইল নম্বর দিন।'); return false; }
-
       const w = window.selectedWeight || '1000';
       const qty = (window.qtyByWeight||{})[w] || 1;
       const unit = (window.PACKAGE_PRICES||{})[w] || 0;
       const subtotal = unit * qty;
       const shipping = (function(){const c=document.querySelector('input[name="shipping"]:checked');return c?parseFloat(c.value):70})();
       const pay = window.selectedPayment || 'cod';
-      let senderNumber='', trxId='';
+      let trxId='';
       if(pay==='bkash'||pay==='nagad'){
         const inp = document.getElementById(pay+'TrxId'); trxId = inp?inp.value.trim():'';
         if(!trxId){ alert('ট্রানজেকশন আইডি লিখুন।'); return false; }
@@ -1945,16 +2045,19 @@
       const total = subtotal + shipping;
       const WLABELS = window.WEIGHT_LABELS || {'500':'500 গ্রাম','1000':'1 কেজি'};
       const body = {
+        sessionId: SID,
         customerName:name, phone:mobile, address:address,
         product:'বিশ্বাস হালুয়া', weight:WLABELS[w], quantity:qty,
         productPrice:subtotal, deliveryCharge:shipping, totalAmount:total,
-        paymentMethod:pay, senderNumber, transactionId:trxId, status:'pending'
+        paymentMethod:pay, transactionId:trxId, status:'pending'
       };
       btn.style.pointerEvents='none'; btn.style.opacity='.7';
       try{
         const r = await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const d = await r.json();
         if(!r.ok) throw new Error(d.error||'অর্ডার ব্যর্থ');
+        try{ if(window.gtag) window.gtag('event','purchase',{transaction_id:d.order?.orderId, value:total, currency:'BDT'}); }catch(e){}
+        try{ if(window.fbq) window.fbq('track','Purchase',{value:total, currency:'BDT'}); }catch(e){}
         const order = { name, address, mobile, product:body.product+' ('+WLABELS[w]+')', quantity:qty, total:'৳ '+total.toLocaleString('en-US'), payment:{method:pay,trxId}, orderId:d.order?.orderId };
         if(typeof showOrderSuccess==='function') showOrderSuccess(order);
         else alert('অর্ডার সফল! Order ID: '+(d.order?.orderId||''));
@@ -1967,8 +2070,14 @@
     };
   }
 
-  // ---------- Init ----------
-  function init(){ applyContent(); applyProducts(); applyReviews(); hookOrderSubmit(); }
+  function init(){
+    applyContent();
+    applyProducts();
+    applyReviews();
+    hookOrderSubmit();
+    hookIncompleteCapture();
+    injectTrackingWidget();
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
