@@ -226,9 +226,15 @@ tbody tr:hover{background:#fdf9f0}
       <a href="#" data-page="payments"><i class="fa-solid fa-credit-card"></i>পেমেন্ট</a>
       <a href="#" data-page="reviews"><i class="fa-solid fa-star"></i>রিভিউ</a>
       <a href="#" data-page="analytics"><i class="fa-solid fa-chart-line"></i>এনালিটিক্স</a>
+      <div class="group">পণ্য ও অফার</div>
+      <a href="#" data-page="products"><i class="fa-solid fa-box"></i>পণ্য (Products)</a>
+      <a href="#" data-page="offers"><i class="fa-solid fa-ticket"></i>অফার / কুপন</a>
+      <div class="group">রিপোর্ট</div>
+      <a href="#" data-page="reports"><i class="fa-solid fa-chart-column"></i>সেলস রিপোর্ট</a>
       <div class="group">ওয়েবসাইট</div>
       <a href="#" data-page="content"><i class="fa-solid fa-pen-to-square"></i>ওয়েবসাইট কনটেন্ট</a>
       <a href="#" data-page="settings"><i class="fa-solid fa-gear"></i>সেটিংস</a>
+      <a href="#" data-page="password"><i class="fa-solid fa-key"></i>পাসওয়ার্ড পরিবর্তন</a>
       <a href="#" onclick="logout();return false"><i class="fa-solid fa-right-from-bracket"></i>লগআউট</a>
     </nav>
   </aside>
@@ -512,6 +518,73 @@ tbody tr:hover{background:#fdf9f0}
         </div>
       </section>
 
+      <!-- PRODUCTS -->
+      <section class="page" id="page-products">
+        <div class="page-head">
+          <div><h1>পণ্য (Products)</h1><p>পণ্য যোগ / সম্পাদনা / ডিলিট এবং স্টক ম্যানেজমেন্ট।</p></div>
+          <button class="btn btn-primary" onclick="openProductModal()"><i class="fa-solid fa-plus"></i>নতুন পণ্য</button>
+        </div>
+        <div class="card" style="padding:0"><div class="tbl-wrap"><table>
+          <thead><tr><th>Image</th><th>নাম</th><th>দাম</th><th>স্টক</th><th>Active</th><th>Action</th></tr></thead>
+          <tbody id="prodTbody"></tbody>
+        </table></div></div>
+      </section>
+
+      <!-- OFFERS -->
+      <section class="page" id="page-offers">
+        <div class="page-head">
+          <div><h1>অফার / কুপন</h1><p>ডিসকাউন্ট কুপন তৈরি ও পরিচালনা করুন।</p></div>
+          <button class="btn btn-primary" onclick="openOfferModal()"><i class="fa-solid fa-plus"></i>নতুন অফার</button>
+        </div>
+        <div class="card" style="padding:0"><div class="tbl-wrap"><table>
+          <thead><tr><th>Code</th><th>টাইটেল</th><th>Type</th><th>Value</th><th>Min</th><th>Used/Max</th><th>Active</th><th>Expires</th><th>Action</th></tr></thead>
+          <tbody id="offTbody"></tbody>
+        </table></div></div>
+      </section>
+
+      <!-- REPORTS -->
+      <section class="page" id="page-reports">
+        <div class="page-head"><div><h1>সেলস / অর্ডার রিপোর্ট</h1><p>তারিখ অনুযায়ী বিক্রয়, স্ট্যাটাস ও পণ্যের রিপোর্ট।</p></div></div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="filters" style="margin:0">
+            <input type="date" id="repFrom">
+            <input type="date" id="repTo">
+            <select id="repGroup"><option value="day">দিন অনুযায়ী</option><option value="month">মাস অনুযায়ী</option></select>
+            <button class="btn btn-primary btn-sm" onclick="loadReports()"><i class="fa-solid fa-filter"></i>রিপোর্ট দেখুন</button>
+            <button class="btn btn-outline btn-sm" onclick="exportReportCSV()"><i class="fa-solid fa-download"></i>CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i>প্রিন্ট</button>
+          </div>
+        </div>
+        <div class="grid grid-4" style="margin-bottom:18px">
+          <div class="stat"><div class="ic o"><i class="fa-solid fa-cart-shopping"></i></div><div><h3>মোট অর্ডার</h3><div class="num" id="rTotOrd">0</div></div></div>
+          <div class="stat"><div class="ic a"><i class="fa-solid fa-sack-dollar"></i></div><div><h3>মোট বিক্রয়</h3><div class="num" id="rTotSale">৳0</div></div></div>
+          <div class="stat"><div class="ic b"><i class="fa-solid fa-truck"></i></div><div><h3>ডেলিভারি চার্জ</h3><div class="num" id="rTotDel">৳0</div></div></div>
+          <div class="stat"><div class="ic g"><i class="fa-solid fa-arrow-trend-up"></i></div><div><h3>গড় অর্ডার</h3><div class="num" id="rAvg">৳0</div></div></div>
+        </div>
+        <div class="grid grid-2" style="margin-bottom:18px">
+          <div class="card"><h3 style="margin-bottom:12px;color:var(--maroon-dark)">সময় অনুযায়ী বিক্রয়</h3><div class="tbl-wrap"><table><thead><tr><th>তারিখ</th><th>অর্ডার</th><th>বিক্রয়</th></tr></thead><tbody id="repDayTbody"></tbody></table></div></div>
+          <div class="card"><h3 style="margin-bottom:12px;color:var(--maroon-dark)">স্ট্যাটাস</h3><div class="tbl-wrap"><table><thead><tr><th>Status</th><th>অর্ডার</th><th>বিক্রয়</th></tr></thead><tbody id="repStTbody"></tbody></table></div></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card"><h3 style="margin-bottom:12px;color:var(--maroon-dark)">টপ পণ্য</h3><div class="tbl-wrap"><table><thead><tr><th>পণ্য</th><th>Qty</th><th>বিক্রয়</th></tr></thead><tbody id="repPrTbody"></tbody></table></div></div>
+          <div class="card"><h3 style="margin-bottom:12px;color:var(--maroon-dark)">পেমেন্ট মেথড</h3><div class="tbl-wrap"><table><thead><tr><th>Method</th><th>অর্ডার</th><th>বিক্রয়</th></tr></thead><tbody id="repPayTbody"></tbody></table></div></div>
+        </div>
+      </section>
+
+      <!-- CHANGE PASSWORD -->
+      <section class="page" id="page-password">
+        <div class="page-head"><div><h1>পাসওয়ার্ড পরিবর্তন</h1><p>এডমিন পাসওয়ার্ড আপডেট করুন। সেভ করলেই ডাটাবেসে সংরক্ষিত হবে।</p></div></div>
+        <div class="card" style="max-width:520px">
+          <div class="form-grid">
+            <div class="field full"><label>ইউজারনেম (ঐচ্ছিক)</label><input id="cpUser" placeholder="admin"></div>
+            <div class="field full"><label>বর্তমান পাসওয়ার্ড</label><input type="password" id="cpCur"></div>
+            <div class="field full"><label>নতুন পাসওয়ার্ড (৬+ অক্ষর)</label><input type="password" id="cpNew"></div>
+            <div class="field full"><label>নতুন পাসওয়ার্ড আবার</label><input type="password" id="cpNew2"></div>
+          </div>
+          <button class="btn btn-primary" onclick="changePassword()"><i class="fa-solid fa-key"></i>পাসওয়ার্ড আপডেট</button>
+        </div>
+      </section>
+
       <!-- SETTINGS -->
       <section class="page" id="page-settings">
         <div class="page-head"><div><h1>সেটিংস</h1><p>এডমিন অ্যাকাউন্ট তথ্য।</p></div></div>
@@ -553,6 +626,7 @@ tbody tr:hover{background:#fdf9f0}
   </div>
   <div class="foot">
     <button class="btn btn-outline" onclick="closeModal('mOrder')">বাতিল</button>
+    <button class="btn btn-outline" onclick="printInvoice()"><i class="fa-solid fa-print"></i>ইনভয়েস প্রিন্ট</button>
     <button class="btn btn-primary" onclick="saveOrder()">আপডেট</button>
   </div>
 </div></div>
@@ -572,6 +646,46 @@ tbody tr:hover{background:#fdf9f0}
   <div class="foot">
     <button class="btn btn-outline" onclick="closeModal('mReview')">বাতিল</button>
     <button class="btn btn-primary" onclick="saveReview()">সেভ</button>
+  </div>
+</div></div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-bg" id="mProd"><div class="modal lg">
+  <h2><span>পণ্য</span><button class="x" onclick="closeModal('mProd')"><i class="fa-solid fa-xmark"></i></button></h2>
+  <input type="hidden" id="pId">
+  <div class="form-grid">
+    <div class="field"><label>পণ্যের নাম</label><input id="pName"></div>
+    <div class="field"><label>Slug (ঐচ্ছিক)</label><input id="pSlug"></div>
+    <div class="field full"><label>বর্ণনা</label><textarea id="pDesc"></textarea></div>
+    <div class="field full"><label>ছবি</label><input type="file" accept="image/*" onchange="uploadTo(this,'pImg')"><input id="pImg" placeholder="Image URL" style="margin-top:6px"></div>
+    <div class="field"><label>বেস দাম (৳)</label><input type="number" id="pPrice"></div>
+    <div class="field"><label>স্টক</label><input type="number" id="pStock"></div>
+    <div class="field"><label>Active</label><select id="pAct"><option value="true">Yes</option><option value="false">No</option></select></div>
+    <div class="field"><label>Order (sort)</label><input type="number" id="pOrder" value="0"></div>
+  </div>
+  <div class="foot">
+    <button class="btn btn-outline" onclick="closeModal('mProd')">বাতিল</button>
+    <button class="btn btn-primary" onclick="saveProduct()">সেভ</button>
+  </div>
+</div></div>
+
+<!-- OFFER MODAL -->
+<div class="modal-bg" id="mOff"><div class="modal">
+  <h2><span>অফার / কুপন</span><button class="x" onclick="closeModal('mOff')"><i class="fa-solid fa-xmark"></i></button></h2>
+  <input type="hidden" id="offId">
+  <div class="form-grid">
+    <div class="field"><label>Coupon Code</label><input id="offCode" placeholder="SAVE10"></div>
+    <div class="field"><label>টাইটেল</label><input id="offTitle"></div>
+    <div class="field"><label>Type</label><select id="offType"><option value="percent">Percent (%)</option><option value="flat">Flat (৳)</option></select></div>
+    <div class="field"><label>Value</label><input type="number" id="offValue"></div>
+    <div class="field"><label>Min amount (৳)</label><input type="number" id="offMin" value="0"></div>
+    <div class="field"><label>Max uses (0=∞)</label><input type="number" id="offMax" value="0"></div>
+    <div class="field"><label>Active</label><select id="offAct"><option value="true">Yes</option><option value="false">No</option></select></div>
+    <div class="field"><label>মেয়াদ শেষ</label><input type="date" id="offExp"></div>
+  </div>
+  <div class="foot">
+    <button class="btn btn-outline" onclick="closeModal('mOff')">বাতিল</button>
+    <button class="btn btn-primary" onclick="saveOffer()">সেভ</button>
   </div>
 </div></div>
 
@@ -616,7 +730,7 @@ function go(page){
   document.querySelectorAll('.sb-nav a[data-page]').forEach(a=>a.classList.toggle('active',a.dataset.page===page));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+page));
   if(window.innerWidth<=820){$('sidebar').classList.remove('open');$('sbBackdrop').classList.remove('open')}
-  const loaders={dashboard:loadDashboard,orders:loadOrders,incomplete:loadIncomplete,tracking:()=>{},customers:loadCustomers,payments:loadPayments,reviews:loadReviews,content:loadContent,analytics:loadAnalytics,settings:()=>{}};
+  const loaders={dashboard:loadDashboard,orders:loadOrders,incomplete:loadIncomplete,tracking:()=>{},customers:loadCustomers,payments:loadPayments,reviews:loadReviews,content:loadContent,analytics:loadAnalytics,products:loadProducts,offers:loadOffers,reports:loadReports,password:()=>{},settings:()=>{}};
   loaders[page]&&loaders[page]();
 }
 function toggleSidebar(){$('sidebar').classList.toggle('open');$('sbBackdrop').classList.toggle('open')}
@@ -866,6 +980,146 @@ async function saveAnalytics(){
     toast('এনালিটিক্স সেভ');
   }catch(e){toast(e.message,true)}
 }
+
+
+// ---------- Products ----------
+async function loadProducts(){
+  try{
+    const list=await api('/api/products/all');
+    $('prodTbody').innerHTML=list.length?list.map(p=>`<tr>
+      <td>${p.image?`<img src="${p.image}" style="width:52px;height:52px;object-fit:cover">`:'-'}</td>
+      <td><b>${p.name||''}</b><div style="font-size:.75rem;color:var(--muted)">${p.slug||''}</div></td>
+      <td>${fmt(p.price)}</td>
+      <td><input type="number" value="${p.stock||0}" style="width:80px;padding:6px" onchange="setStock('${p._id}',this.value)"></td>
+      <td><span class="badge ${p.active?'active':'inactive'}">${p.active?'Yes':'No'}</span></td>
+      <td><div class="actions">
+        <button class="act" onclick='editProduct(${JSON.stringify(p).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+        <button class="act del" onclick="delProduct('${p._id}')"><i class="fa-solid fa-trash"></i></button>
+      </div></td></tr>`).join(''):`<tr><td colspan="6" class="empty">কোনো পণ্য নেই</td></tr>`;
+  }catch(e){toast(e.message,true)}
+}
+function openProductModal(){['pId','pName','pSlug','pDesc','pImg','pPrice','pStock','pSlug'].forEach(id=>$(id).value='');$('pAct').value='true';$('pOrder').value=0;openModal('mProd')}
+function editProduct(p){
+  $('pId').value=p._id;$('pName').value=p.name||'';$('pSlug').value=p.slug||'';$('pDesc').value=p.description||'';
+  $('pImg').value=p.image||'';$('pPrice').value=p.price||0;$('pStock').value=p.stock||0;
+  $('pAct').value=p.active?'true':'false';$('pOrder').value=p.order||0;openModal('mProd');
+}
+async function saveProduct(){
+  try{
+    const body={name:$('pName').value.trim(),slug:$('pSlug').value.trim(),description:$('pDesc').value,image:$('pImg').value,
+      price:+$('pPrice').value||0,stock:+$('pStock').value||0,active:$('pAct').value==='true',order:+$('pOrder').value||0};
+    if(!body.name){toast('নাম দিন',true);return}
+    const id=$('pId').value;
+    if(id) await api('/api/products/'+id,{method:'PUT',body:JSON.stringify(body)});
+    else   await api('/api/products',{method:'POST',body:JSON.stringify(body)});
+    toast('সেভ');closeModal('mProd');loadProducts();
+  }catch(e){toast(e.message,true)}
+}
+async function setStock(id,v){try{await api('/api/products/'+id+'/stock',{method:'PATCH',body:JSON.stringify({set:+v})});toast('স্টক আপডেট')}catch(e){toast(e.message,true)}}
+async function delProduct(id){if(!confirm('ডিলিট?'))return;try{await api('/api/products/'+id,{method:'DELETE'});toast('ডিলিট');loadProducts()}catch(e){toast(e.message,true)}}
+
+// ---------- Offers ----------
+async function loadOffers(){
+  try{
+    const list=await api('/api/offers');
+    $('offTbody').innerHTML=list.length?list.map(o=>`<tr>
+      <td><b>${o.code||''}</b></td><td>${o.title||''}</td><td>${o.type}</td>
+      <td>${o.type==='percent'?o.value+'%':fmt(o.value)}</td>
+      <td>${o.minAmount?fmt(o.minAmount):'-'}</td>
+      <td>${o.used||0}/${o.maxUses||'∞'}</td>
+      <td><span class="badge ${o.active?'active':'inactive'}">${o.active?'Yes':'No'}</span></td>
+      <td>${o.expiresAt?new Date(o.expiresAt).toLocaleDateString('en-GB'):'-'}</td>
+      <td><div class="actions">
+        <button class="act" onclick='editOffer(${JSON.stringify(o).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+        <button class="act del" onclick="delOffer('${o._id}')"><i class="fa-solid fa-trash"></i></button>
+      </div></td></tr>`).join(''):`<tr><td colspan="9" class="empty">কোনো অফার নেই</td></tr>`;
+  }catch(e){toast(e.message,true)}
+}
+function openOfferModal(){['offId','offCode','offTitle','offValue','offMin','offMax','offExp'].forEach(id=>$(id).value='');$('offType').value='percent';$('offAct').value='true';$('offMin').value=0;$('offMax').value=0;openModal('mOff')}
+function editOffer(o){
+  $('offId').value=o._id;$('offCode').value=o.code||'';$('offTitle').value=o.title||'';
+  $('offType').value=o.type||'percent';$('offValue').value=o.value||0;
+  $('offMin').value=o.minAmount||0;$('offMax').value=o.maxUses||0;
+  $('offAct').value=o.active?'true':'false';
+  $('offExp').value=o.expiresAt?new Date(o.expiresAt).toISOString().slice(0,10):'';
+  openModal('mOff');
+}
+async function saveOffer(){
+  try{
+    const body={code:$('offCode').value.trim().toUpperCase(),title:$('offTitle').value,type:$('offType').value,
+      value:+$('offValue').value||0,minAmount:+$('offMin').value||0,maxUses:+$('offMax').value||0,
+      active:$('offAct').value==='true',expiresAt:$('offExp').value||null};
+    if(!body.code){toast('Code দিন',true);return}
+    const id=$('offId').value;
+    if(id) await api('/api/offers/'+id,{method:'PUT',body:JSON.stringify(body)});
+    else   await api('/api/offers',{method:'POST',body:JSON.stringify(body)});
+    toast('সেভ');closeModal('mOff');loadOffers();
+  }catch(e){toast(e.message,true)}
+}
+async function delOffer(id){if(!confirm('ডিলিট?'))return;try{await api('/api/offers/'+id,{method:'DELETE'});toast('ডিলিট');loadOffers()}catch(e){toast(e.message,true)}}
+
+// ---------- Reports ----------
+let __repData=null;
+async function loadReports(){
+  try{
+    const from=$('repFrom').value, to=$('repTo').value, groupBy=$('repGroup').value;
+    const qs=new URLSearchParams();if(from)qs.set('from',from);if(to)qs.set('to',to);qs.set('groupBy',groupBy);
+    const r=await api('/api/reports/sales?'+qs.toString()); __repData=r;
+    $('rTotOrd').textContent=r.totalOrders;
+    $('rTotSale').textContent=fmt(r.totalSales);
+    $('rTotDel').textContent=fmt(r.totalDelivery);
+    $('rAvg').textContent=fmt(r.totalOrders?Math.round(r.totalSales/r.totalOrders):0);
+    $('repDayTbody').innerHTML=r.byDay.length?r.byDay.map(d=>`<tr><td>${d._id}</td><td>${d.orders}</td><td>${fmt(d.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
+    $('repStTbody').innerHTML=r.byStatus.length?r.byStatus.map(d=>`<tr><td><span class="badge ${d._id}">${d._id}</span></td><td>${d.count}</td><td>${fmt(d.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
+    $('repPrTbody').innerHTML=r.byProduct.length?r.byProduct.map(d=>`<tr><td>${d._id||'-'}</td><td>${d.qty}</td><td>${fmt(d.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
+    $('repPayTbody').innerHTML=r.byPayment.length?r.byPayment.map(d=>`<tr><td>${(d._id||'').toUpperCase()}</td><td>${d.count}</td><td>${fmt(d.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
+  }catch(e){toast(e.message,true)}
+}
+function exportReportCSV(){
+  if(!__repData){toast('আগে রিপোর্ট লোড করুন',true);return}
+  const rows=[['তারিখ','অর্ডার','বিক্রয়'],...__repData.byDay.map(d=>[d._id,d.orders,d.sales])];
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sales-report.csv';a.click();
+}
+
+// ---------- Change Password ----------
+async function changePassword(){
+  const cur=$('cpCur').value, n=$('cpNew').value, n2=$('cpNew2').value, u=$('cpUser').value.trim();
+  if(!n||n.length<6){toast('নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর',true);return}
+  if(n!==n2){toast('পাসওয়ার্ড মিলছে না',true);return}
+  try{
+    await api('/api/auth/change-password',{method:'POST',body:JSON.stringify({currentPassword:cur,newPassword:n,username:u||undefined})});
+    toast('পাসওয়ার্ড আপডেট হয়েছে');
+    ['cpCur','cpNew','cpNew2','cpUser'].forEach(id=>$(id).value='');
+  }catch(e){toast(e.message,true)}
+}
+
+// ---------- Print Invoice ----------
+function printInvoice(){
+  const o=__currentOrder; if(!o){toast('অর্ডার লোড করুন',true);return}
+  const w=window.open('','_blank','width=800,height=900');
+  const rows=`<tr><td>${o.product||''} (${o.weight||''})</td><td style="text-align:center">${o.quantity||1}</td><td style="text-align:right">${o.productPrice||0}</td><td style="text-align:right">${(o.productPrice||0)}</td></tr>`;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${o.orderId}</title>
+    <style>body{font-family:'Hind Siliguri',Arial,sans-serif;padding:24px;color:#2b1810}
+    h1{color:#a8501a;margin-bottom:4px}.hd{display:flex;justify-content:space-between;border-bottom:2px solid #a8501a;padding-bottom:10px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:8px 10px}th{background:#fdf6ec;text-align:left}
+    .tot{margin-top:12px;text-align:right}.tot div{margin:4px 0}.big{font-size:1.15rem;font-weight:700;color:#a8501a}
+    .foot{margin-top:30px;text-align:center;color:#8a6f5c;font-size:.85rem}</style></head><body>
+    <div class="hd"><div><h1>বিশ্বাস হালুয়া</h1><div>খাঁটি ঘরোয়া হালুয়া</div></div>
+      <div style="text-align:right"><div><b>Invoice #</b> ${o.orderId||''}</div><div>${fmtDate(o.createdAt)}</div></div></div>
+    <div><b>গ্রাহক:</b> ${o.customerName||''}<br><b>ফোন:</b> ${o.phone||''}<br><b>ঠিকানা:</b> ${o.address||''}</div>
+    <table><thead><tr><th>পণ্য</th><th>পরিমাণ</th><th>দাম</th><th>মোট</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="tot"><div>Subtotal: ৳ ${(o.productPrice||0).toLocaleString('en-US')}</div>
+      <div>Delivery: ৳ ${(o.deliveryCharge||0).toLocaleString('en-US')}</div>
+      <div class="big">Total: ৳ ${(o.totalAmount||0).toLocaleString('en-US')}</div>
+      <div style="margin-top:8px">Payment: ${(o.paymentMethod||'').toUpperCase()} ${o.transactionId?'· TrxID: '+o.transactionId:''}</div>
+      <div>Status: ${o.status||''}</div></div>
+    <div class="foot">ধন্যবাদ আমাদের সাথে থাকার জন্য।</div>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
 
 // ---------- Init ----------
 if(TOKEN) showApp();

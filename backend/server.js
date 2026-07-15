@@ -10,6 +10,7 @@ const express     = require('express');
 const cors        = require('cors');
 const mongoose    = require('mongoose');
 const jwt         = require('jsonwebtoken');
+const crypto      = require('crypto');
 const multer      = require('multer');
 const cloudinary  = require('cloudinary').v2;
 
@@ -111,6 +112,41 @@ const customerSchema = new mongoose.Schema({
   lastOrderAt: Date,
 }, { timestamps: true });
 
+
+// ---------- Product ----------
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  slug: String,
+  description: String,
+  image: String,
+  variants: [{ weight: String, price: Number, stock: { type: Number, default: 0 } }],
+  price: Number,
+  stock: { type: Number, default: 0 },
+  active: { type: Boolean, default: true },
+  order: { type: Number, default: 0 },
+}, { timestamps: true });
+
+// ---------- Offer / Coupon ----------
+const offerSchema = new mongoose.Schema({
+  code: { type: String, unique: true, index: true },
+  title: String,
+  type: { type: String, enum: ['percent','flat'], default: 'percent' },
+  value: { type: Number, default: 0 },
+  minAmount: { type: Number, default: 0 },
+  maxUses: { type: Number, default: 0 }, // 0 = unlimited
+  used: { type: Number, default: 0 },
+  active: { type: Boolean, default: true },
+  expiresAt: Date,
+}, { timestamps: true });
+
+// ---------- Admin User (for password change) ----------
+const adminUserSchema = new mongoose.Schema({
+  key: { type: String, default: 'main', unique: true },
+  username: String,
+  passwordHash: String, // sha256(salt+password)
+  salt: String,
+}, { timestamps: true });
+
 // Extended content: বেশি টেক্স ফিল্ড + GA
 const contentSchema = new mongoose.Schema({
   key: { type: String, default: 'main', unique: true },
@@ -141,6 +177,9 @@ const Order            = mongoose.model('Order',  orderSchema);
 const IncompleteOrder  = mongoose.model('IncompleteOrder', incompleteOrderSchema);
 const Customer         = mongoose.model('Customer', customerSchema);
 const Content          = mongoose.model('Content', contentSchema);
+const Product          = mongoose.model('Product', productSchema);
+const Offer            = mongoose.model('Offer',   offerSchema);
+const AdminUser        = mongoose.model('AdminUser', adminUserSchema);
 
 // ---------- Auth ----------
 function auth(req, res, next) {
@@ -161,15 +200,56 @@ app.get('/', (_req, res) => res.json({
 app.get('/api/health', (_req, res) => res.json({ ok: true, db: mongoose.connection.readyState === 1 }));
 
 // ---------- Auth ----------
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body || {};
+  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
   const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
   const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-  const SECRET     = process.env.JWT_SECRET     || 'change-me-please-in-production';
-  if (username !== ADMIN_USER || password !== ADMIN_PASS)
-    return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
-  const token = jwt.sign({ u: username, role: 'admin' }, SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { username, role: 'admin' } });
+  try {
+    // Prefer DB admin user if set
+    if (mongoose.connection.readyState === 1) {
+      const u = await AdminUser.findOne({ key: 'main' });
+      if (u && u.passwordHash && u.salt) {
+        const h = crypto.createHash('sha256').update(u.salt + (password||'')).digest('hex');
+        if (username === (u.username || ADMIN_USER) && h === u.passwordHash) {
+          const token = jwt.sign({ u: username, role: 'admin' }, SECRET, { expiresIn: '7d' });
+          return res.json({ token, user: { username, role: 'admin' } });
+        }
+        return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+      }
+    }
+    // Fallback: env
+    if (username !== ADMIN_USER || password !== ADMIN_PASS)
+      return res.status(401).json({ error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+    const token = jwt.sign({ u: username, role: 'admin' }, SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { username, role: 'admin' } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Change password (persists to DB — overrides env after first change)
+app.post('/api/auth/change-password', auth, requireDb, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword, username } = req.body || {};
+    if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষর' });
+    const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
+    const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
+    let existing = await AdminUser.findOne({ key: 'main' });
+    // Verify current password
+    if (existing && existing.passwordHash) {
+      const h = crypto.createHash('sha256').update(existing.salt + (currentPassword||'')).digest('hex');
+      if (h !== existing.passwordHash) return res.status(401).json({ error: 'বর্তমান পাসওয়ার্ড ভুল' });
+    } else {
+      if ((currentPassword||'') !== ADMIN_PASS) return res.status(401).json({ error: 'বর্তমান পাসওয়ার্ড ভুল' });
+    }
+    const salt = crypto.randomBytes(8).toString('hex');
+    const passwordHash = crypto.createHash('sha256').update(salt + newPassword).digest('hex');
+    const doc = await AdminUser.findOneAndUpdate(
+      { key: 'main' },
+      { username: username || (existing && existing.username) || ADMIN_USER, passwordHash, salt },
+      { upsert: true, new: true }
+    );
+    res.json({ ok: true, username: doc.username });
+  } catch (e) { next(e); }
 });
 
 // ---------- Content ----------
@@ -420,6 +500,97 @@ app.get('/api/dashboard/stats', auth, requireDb, async (_req, res, next) => {
       delivered: status.delivered || 0, cancelled: status.cancelled || 0,
       customers: custCount, incomplete: incompleteCount, visitors: visitorCount,
       recent, best, salesLast7,
+    });
+  } catch (e) { next(e); }
+});
+
+// ---------- Products ----------
+app.get('/api/products', requireDb, async (_req, res, next) => {
+  try { res.json(await Product.find({ active: true }).sort({ order: 1, createdAt: -1 })); } catch (e) { next(e); }
+});
+app.get('/api/products/all', auth, requireDb, async (_req, res, next) => {
+  try { res.json(await Product.find().sort({ order: 1, createdAt: -1 })); } catch (e) { next(e); }
+});
+app.post('/api/products', auth, requireDb, async (req, res, next) => {
+  try { res.json(await Product.create(req.body)); } catch (e) { next(e); }
+});
+app.put('/api/products/:id', auth, requireDb, async (req, res, next) => {
+  try { res.json(await Product.findByIdAndUpdate(req.params.id, req.body, { new: true })); } catch (e) { next(e); }
+});
+app.patch('/api/products/:id/stock', auth, requireDb, async (req, res, next) => {
+  try {
+    const { delta, set } = req.body || {};
+    let update;
+    if (typeof set === 'number') update = { $set: { stock: set } };
+    else update = { $inc: { stock: Number(delta || 0) } };
+    res.json(await Product.findByIdAndUpdate(req.params.id, update, { new: true }));
+  } catch (e) { next(e); }
+});
+app.delete('/api/products/:id', auth, requireDb, async (req, res, next) => {
+  try { await Product.findByIdAndDelete(req.params.id); res.json({ ok: true }); } catch (e) { next(e); }
+});
+
+// ---------- Offers / Coupons ----------
+app.get('/api/offers', auth, requireDb, async (_req, res, next) => {
+  try { res.json(await Offer.find().sort({ createdAt: -1 })); } catch (e) { next(e); }
+});
+app.post('/api/offers/validate', requireDb, async (req, res, next) => {
+  try {
+    const { code, amount } = req.body || {};
+    const o = await Offer.findOne({ code: (code||'').trim().toUpperCase(), active: true });
+    if (!o) return res.status(404).json({ error: 'কুপন কোড অবৈধ' });
+    if (o.expiresAt && new Date(o.expiresAt) < new Date()) return res.status(400).json({ error: 'কুপন মেয়াদোত্তীর্ণ' });
+    if (o.maxUses && o.used >= o.maxUses) return res.status(400).json({ error: 'কুপন ব্যবহারের সীমা শেষ' });
+    if (o.minAmount && Number(amount||0) < o.minAmount) return res.status(400).json({ error: `ন্যূনতম ${o.minAmount} টাকার অর্ডার প্রয়োজন` });
+    const discount = o.type === 'percent' ? Math.round((Number(amount||0) * o.value) / 100) : o.value;
+    res.json({ ok: true, code: o.code, type: o.type, value: o.value, discount });
+  } catch (e) { next(e); }
+});
+app.post('/api/offers', auth, requireDb, async (req, res, next) => {
+  try {
+    const body = { ...req.body }; if (body.code) body.code = body.code.toUpperCase();
+    res.json(await Offer.create(body));
+  } catch (e) { next(e); }
+});
+app.put('/api/offers/:id', auth, requireDb, async (req, res, next) => {
+  try {
+    const body = { ...req.body }; if (body.code) body.code = body.code.toUpperCase();
+    res.json(await Offer.findByIdAndUpdate(req.params.id, body, { new: true }));
+  } catch (e) { next(e); }
+});
+app.delete('/api/offers/:id', auth, requireDb, async (req, res, next) => {
+  try { await Offer.findByIdAndDelete(req.params.id); res.json({ ok: true }); } catch (e) { next(e); }
+});
+
+// ---------- Reports ----------
+app.get('/api/reports/sales', auth, requireDb, async (req, res, next) => {
+  try {
+    const { from, to, groupBy } = req.query;
+    const match = {};
+    if (from || to) match.createdAt = {};
+    if (from) match.createdAt.$gte = new Date(from);
+    if (to)   match.createdAt.$lte = new Date(new Date(to).setHours(23,59,59,999));
+    const fmt = groupBy === 'month' ? '%Y-%m' : '%Y-%m-%d';
+    const [byDay, byStatus, byProduct, byPayment, totals] = await Promise.all([
+      Order.aggregate([
+        { $match: match },
+        { $group: { _id: { $dateToString: { format: fmt, date: '$createdAt' } }, orders: { $sum: 1 }, sales: { $sum: '$totalAmount' } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Order.aggregate([{ $match: match }, { $group: { _id: '$status', count: { $sum: 1 }, sales: { $sum: '$totalAmount' } } }]),
+      Order.aggregate([
+        { $match: match },
+        { $group: { _id: '$product', qty: { $sum: '$quantity' }, sales: { $sum: '$totalAmount' } } },
+        { $sort: { sales: -1 } }, { $limit: 20 },
+      ]),
+      Order.aggregate([{ $match: match }, { $group: { _id: '$paymentMethod', count: { $sum: 1 }, sales: { $sum: '$totalAmount' } } }]),
+      Order.aggregate([{ $match: match }, { $group: { _id: null, count: { $sum: 1 }, sales: { $sum: '$totalAmount' }, delivery: { $sum: '$deliveryCharge' } } }]),
+    ]);
+    res.json({
+      totalOrders: totals[0]?.count || 0,
+      totalSales:  totals[0]?.sales || 0,
+      totalDelivery: totals[0]?.delivery || 0,
+      byDay, byStatus, byProduct, byPayment,
     });
   } catch (e) { next(e); }
 });
