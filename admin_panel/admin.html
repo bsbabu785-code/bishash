@@ -970,7 +970,7 @@ async function saveContent(){
 
 // ---------- Settings ----------
 function loadSettings(){ $('apiUrlInp').value = API; }
-function saveApiUrl(){ API=$('apiUrlInp').value.trim().replace(/\/$/,''); localStorage.setItem('bh_api',API); toast('API URL সেভ'); }
+function saveApiUrl(){ API=$('apiUrlInp').value.trim().replace(/\/$/,''); localStorage.setItem('bh_api',API); toast('https://bishash-1.onrender.com'); }
 
 // ---------- Init ----------
 if (TOKEN) showApp();
