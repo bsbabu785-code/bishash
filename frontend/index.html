@@ -1052,8 +1052,6 @@
 
 
 <section class="yt-video" id="ytSection">
-
-<section class="yt-video">
   <div class="container yt-video-inner">
     <div class="yt-text">
       <h2 class="section-title">কেন সবাই বিশ্বাস হালুয়া বেছে নিচ্ছেন?</h2>
@@ -1267,7 +1265,7 @@
   </div>
 </section>
 
-<section class="reviews">
+<section class="reviews" id="reviewsSection">
   <div class="container">
     <h2 class="section-title" data-bh="reviewsTitle">কাস্টমার রিভিউ</h2>
     <div class="review-slider">
@@ -1306,8 +1304,9 @@
 </div>
 
 <script>
-  // এখানে সব কাস্টমার রিভিউ ইমেজের path যোগ করুন — যতগুলো ছবি থাকবে সবগুলো এই লিস্টে বসিয়ে দিন
-  const reviewImages = [
+  // এডমিন প্যানেল থেকে যত রিভিউ ইমেজ সেট করা হবে, শুধু সেগুলোই এখানে দেখানো হবে (applyReviews() দেখুন নিচে)।
+  // window-এ রাখা হয়েছে যাতে applyReviews() থেকে আপডেট করা লিস্ট renderReviewGrid()-এ সঠিকভাবে ব্যবহার হয়।
+  window.reviewImages = [
     "assets/review.png",
     "assets/review.png",
     "assets/review.png",
@@ -1320,6 +1319,12 @@
   }
 
   function renderReviewGrid(){
+    const sectionEl = document.getElementById('reviewsSection');
+    if(!reviewImages.length){
+      if(sectionEl) sectionEl.style.display = 'none';
+      return;
+    }
+    if(sectionEl) sectionEl.style.display = '';
     const track = document.getElementById('reviewTrack');
     track.innerHTML = '';
     reviewImages.forEach((src, i) => {
@@ -1587,11 +1592,13 @@
 </div>
 
 <script>
-  const WEIGHTS = ['1000','500'];
-  const PACKAGE_PRICES = { '500': 650, '1000': 1200 };
-  const WEIGHT_LABELS = { '500': '500 গ্রাম', '1000': '1 কেজি' };
-  const qtyByWeight = { '500': 1, '1000': 1 };
-  let selectedWeight = '1000';
+  // এই ভ্যারিয়েবলগুলো window-এ রাখা হয়েছে যাতে এডমিন প্যানেল থেকে প্রাইস/প্যাকেজ
+  // পরিবর্তন করলে (applyDynamicPackages/applyProducts) তা এখানেও ঠিকভাবে কাজ করে।
+  window.WEIGHTS = ['1000','500'];
+  window.PACKAGE_PRICES = { '500': 650, '1000': 1200 };
+  window.WEIGHT_LABELS = { '500': '500 গ্রাম', '1000': '1 কেজি' };
+  window.qtyByWeight = { '500': 1, '1000': 1 };
+  window.selectedWeight = '1000';
   const MAX_QTY = 20;
 
   function formatBDT(amount){
@@ -1648,7 +1655,7 @@
     document.getElementById('placeOrderPrice').textContent = formatBDT(total);
   }
 
-  let selectedPayment = 'cod';
+  window.selectedPayment = 'cod';
 
   function selectPayment(method){
     selectedPayment = method;
@@ -1744,7 +1751,7 @@
       '<div><b>মোট মূল্য:</b> ' + order.total + '</div>';
 
     const message = buildWhatsAppMessage(order);
-    document.getElementById('orderWhatsappBtn').href = 'https://wa.me/8801332663380?text=' + encodeURIComponent(message);
+    document.getElementById('orderWhatsappBtn').href = 'https://wa.me/' + (window.__waNumber || '8801716221962') + '?text=' + encodeURIComponent(message);
 
     document.getElementById('orderSuccessOverlay').classList.add('active');
   }
@@ -1801,7 +1808,7 @@
       product: productName, quantity: orderQty, total: totalText
     });
 
-    window.open('https://wa.me/8801332663380?text=' + encodeURIComponent(message), '_blank', 'noopener');
+    window.open('https://wa.me/' + (window.__waNumber || '8801716221962') + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
     return false;
   }
 
@@ -1810,7 +1817,7 @@
 </script>
 
 <div class="fixed-contacts" id="fixedContacts">
-  <a class="whatsapp-fixed" href="https://wa.me/8801332663380" target="_blank" rel="noopener" onclick="return openWhatsAppOrder()">
+  <a class="whatsapp-fixed" href="https://wa.me/8801716221962" target="_blank" rel="noopener" onclick="return openWhatsAppOrder()">
     <div class="bubble"><svg class="icon" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm5.86 14.07c-.25.7-1.45 1.33-2 1.42-.53.09-1.15.13-1.86-.12-.43-.15-.98-.33-1.69-.65-2.97-1.28-4.9-4.27-5.05-4.47-.15-.2-1.2-1.6-1.2-3.05 0-1.45.76-2.16 1.03-2.46.27-.3.6-.37.8-.37.2 0 .4 0 .58.01.19.01.44-.07.68.53.25.6.85 2.08.92 2.23.07.15.12.33.02.53-.1.2-.15.33-.3.5-.15.18-.31.4-.44.53-.15.15-.3.31-.13.6.17.3.76 1.26 1.63 2.04 1.12 1 2.06 1.31 2.36 1.46.3.15.47.13.65-.08.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.73.82 2.02.97.3.15.5.22.57.35.07.13.07.75-.18 1.45z"/></svg></div>
     <div class="pill">হোয়াটসঅ্যাপ করুন</div>
   </a>
@@ -2025,16 +2032,16 @@
      if(land.fixed){
        const fx = land.fixed;
        const fc = document.getElementById('fixedContacts'); if(fc) fc.style.display = fx.enabled===false?'none':'';
-       if(fx.wa) $$('.fixed-contacts a[href*="wa.me"], a[href*="wa.me"]').forEach(a=>{ a.href='https://wa.me/'+fx.wa; });
        if(fx.phone) $$('.fixed-contacts a[href^="tel:"], a.call-fixed').forEach(a=>{ a.href='tel:'+fx.phone; });
        if(fx.waTxt){ const t=document.querySelector('.fixed-contacts .pill, .wa-pill'); if(t) t.textContent=fx.waTxt; }
        if(fx.callTxt){ const t=document.querySelector('.fixed-contacts a[href^="tel:"] .pill'); if(t) t.textContent=fx.callTxt; }
      }
 
-     // ---- WhatsApp fallback (from contact) ----
-     if(c.contact && c.contact.whatsapp){
-       $$('a[href*="wa.me"]').forEach(a=>{ if(!land.fixed || !land.fixed.wa) a.href='https://wa.me/'+c.contact.whatsapp; });
-     }
+     // ---- WhatsApp নাম্বার — একটাই সোর্স, যাতে এডমিন প্যানেল থেকে পরিবর্তন করলে
+     // ফিক্সড বাটন, অর্ডার-সাকসেস বাটন এবং "WhatsApp-এ অর্ডার করুন" বাটন — সবগুলোতেই কাজ করে ----
+     const waNumber = (land.fixed && land.fixed.wa) || (c.contact && c.contact.whatsapp) || '8801716221962';
+     window.__waNumber = waNumber;
+     $$('a[href*="wa.me"]').forEach(a=>{ a.href = a.href.replace(/wa\.me\/\d+/, 'wa.me/' + waNumber); });
 
      // ---- Social links ----
      if(c.social){
@@ -2122,9 +2129,9 @@
 
    // ---------- Reviews ----------
    async function applyReviews(){
-     const list = await j('/api/reviews'); if(!list||!list.length) return;
+     const list = await j('/api/reviews'); if(!list) return; // API ব্যর্থ হলে ডিফল্ট ছবিগুলো থাকুক
      const imgs = list.filter(r=>r.active!==false && r.image).sort((a,b)=>(a.order||0)-(b.order||0)).map(r=>r.image);
-     if(!imgs.length) return;
+     // এডমিন প্যানেলে যা সেট আছে (এমনকি খালি হলেও) শুধু সেটাই index.html-এ দেখানো হবে
      if(!Array.isArray(window.reviewImages)) window.reviewImages = [];
      window.reviewImages.length = 0;
      imgs.forEach(url=>window.reviewImages.push(url));
@@ -2160,6 +2167,29 @@
       const el = document.getElementById(id);
       if(el){ el.addEventListener('input', scheduleIncompleteSave); el.addEventListener('blur', scheduleIncompleteSave); }
     });
+  }
+
+  // ---------- Reset order form after a successful order ----------
+  function resetOrderForm(){
+    clearTimeout(__incTimer);
+    ['custName','custAddress','custMobile','bkashTrxId','nagadTrxId'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    // শিপিং ঢাকার ভিতরে-তে ফিরিয়ে দিন
+    const firstShip = document.querySelector('input[name="shipping"]');
+    if(firstShip) firstShip.checked = true;
+    // পেমেন্ট মেথড COD-তে ফিরিয়ে দিন
+    if(typeof selectPayment==='function') selectPayment('cod');
+    // প্রোডাক্ট/পরিমাণ প্রথম প্যাকেজ ও ১-এ ফিরিয়ে দিন
+    const weights = window.WEIGHTS || ['1000','500'];
+    weights.forEach(w=>{ if(window.qtyByWeight) window.qtyByWeight[w] = 1; });
+    const firstWeightInput = document.querySelector('input[name="weight"]');
+    if(firstWeightInput){
+      firstWeightInput.checked = true;
+      if(typeof selectWeight==='function') selectWeight(firstWeightInput);
+    } else if(typeof updateOrderSummary==='function'){
+      updateOrderSummary();
+    }
   }
 
 
@@ -2203,6 +2233,7 @@
         const order = { name, address, mobile, product:body.product+' ('+WLABELS[w]+')', quantity:qty, total:'৳ '+total.toLocaleString('en-US'), payment:{method:pay,trxId}, orderId:d.order?.orderId };
         if(typeof showOrderSuccess==='function') showOrderSuccess(order);
         else alert('অর্ডার সফল! Order ID: '+(d.order?.orderId||''));
+        if(typeof resetOrderForm==='function') resetOrderForm();
       }catch(e){
         alert('অর্ডার পাঠানো যায়নি: '+e.message+'\nদয়া করে ফোনে যোগাযোগ করুন।');
       }finally{
@@ -2228,4 +2259,3 @@
 </html>
 </body>
 </html>
-

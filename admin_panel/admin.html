@@ -793,6 +793,7 @@ function go(page){
   document.querySelectorAll('.sb-nav a[data-page]').forEach(a=>a.classList.toggle('active',a.dataset.page===page));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+page));
   if(window.innerWidth<=820){$('sidebar').classList.remove('open');$('sbBackdrop').classList.remove('open')}
+  const fsb=$('floatSaveBtn'); if(fsb) fsb.classList.toggle('show', page==='content');
   const loaders={dashboard:loadDashboard,orders:loadOrders,incomplete:loadIncomplete,tracking:()=>{},customers:loadCustomers,payments:loadPayments,content:loadContent,analytics:loadAnalytics,reports:loadReports,settings:()=>{}};
   loaders[page]&&loaders[page]();
 }
@@ -840,7 +841,7 @@ async function loadDashboard(){
     $('sInc').textContent=s.incomplete||0; $('sCust').textContent=s.customers||0;
     const inc=s.incomplete||0;
     if(inc>0){$('incBadge').style.display='inline-block';$('incBadge').textContent=inc}else{$('incBadge').style.display='none'}
-    $('recentTbody').innerHTML=s.recent&&s.recent.length?s.recent.map(o=>`<tr><td><b>${esc(o.orderId||'')}</b></td><td>${esc(o.customerName||'')}</td><td>${esc(o.phone||'')}</td><td>${fmt(o.totalAmount)}</td><td><span class="badge ${o.status}">${o.status}</span></td><td>${fmtDate(o.createdAt)}</td></tr>`).join(''):`<tr><td colspan="6" class="empty">কোনো অর্ডার নেই</td></tr>`;
+    $('recentTbody').innerHTML=s.recent&&s.recent.length?s.recent.map(o=>`<tr style="cursor:pointer" onclick='go("orders");editOrder(${JSON.stringify(o).replace(/'/g,"&#39;")})'><td><b>${esc(o.orderId||'')}</b></td><td>${esc(o.customerName||'')}</td><td>${esc(o.phone||'')}</td><td>${fmt(o.totalAmount)}</td><td><span class="badge ${o.status}">${o.status}</span></td><td>${fmtDate(o.createdAt)}</td></tr>`).join(''):`<tr><td colspan="6" class="empty">কোনো অর্ডার নেই</td></tr>`;
     // Recent status list (was "best selling")
     $('bestList').innerHTML=(s.recent||[]).slice(0,6).map(o=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span><b style="color:var(--maroon);margin-right:8px">${esc(o.orderId||'')}</b>${esc(o.customerName||'')}</span><span class="badge ${o.status}">${o.status}</span></div>`).join('')||`<div class="empty">ডেটা নেই</div>`;
     // Notifications
@@ -867,15 +868,27 @@ function drawChart(data){
 // ---------- Notifications (red dot only on new orders) ----------
 function getSeenId(){return localStorage.getItem('bh_lastSeenOrderId')||''}
 function setSeenId(id){localStorage.setItem('bh_lastSeenOrderId',id||'')}
+let __notifRecentCache=[];
 function updateNotifications(recent){
+  __notifRecentCache=recent||[];
   const seen=getSeenId();
   const newOnes=[];
   for(const o of recent){if(o._id===seen)break;newOnes.push(o)}
   $('notifDot').classList.toggle('show',newOnes.length>0);
   $('notifList').innerHTML=(recent||[]).slice(0,8).map((o,i)=>{
     const isNew=i<newOnes.length;
-    return `<div class="n-item ${isNew?'new':''}"><b>${esc(o.orderId||'')}</b> — ${esc(o.customerName||'')}<small>${fmtDate(o.createdAt)} · ${fmt(o.totalAmount)}${isNew?' · <span style="color:var(--red);font-weight:700">NEW</span>':''}</small></div>`;
+    return `<div class="n-item ${isNew?'new':''}" style="cursor:pointer" onclick="openNotifOrder('${o._id}')"><b>${esc(o.orderId||'')}</b> — ${esc(o.customerName||'')}<small>${fmtDate(o.createdAt)} · ${fmt(o.totalAmount)}${isNew?' · <span style="color:var(--red);font-weight:700">NEW</span>':''}</small></div>`;
   }).join('')||'<div class="empty" style="padding:20px">কোনো অর্ডার নেই</div>';
+}
+// নোটিফিকেশনে ক্লিক করলে সেই নির্দিষ্ট অর্ডারটি ওপেন হবে
+async function openNotifOrder(id){
+  try{
+    document.getElementById('notifDrop').classList.remove('open');
+    go('orders');
+    let o=(__notifRecentCache||[]).find(x=>x._id===id) || (__ordersCache||[]).find(x=>x._id===id);
+    if(!o){ const list=await api('/api/orders?status=all'); o=(list||[]).find(x=>x._id===id); }
+    if(o) editOrder(o); else toast('অর্ডার খুঁজে পাওয়া যায়নি',true);
+  }catch(e){ toast(e.message,true); }
 }
 function markNotifSeen(){
   const list=__ordersCache&&__ordersCache[0];
@@ -1402,39 +1415,26 @@ async function saveContent(){
 if(TOKEN) showApp();
 </script>
 
-<!-- ============ DOWNLOAD BAR ============ -->
+<!-- ============ ফ্লোটিং সেভ বাটন (শুধু "ল্যান্ডিংপেজ কনটেন্ট" পেজে দেখা যাবে) ============ -->
 <style>
-.dl-bar{position:fixed;bottom:0;left:250px;right:0;background:#fff;border-top:2px solid var(--border);padding:8px 22px;display:flex;gap:10px;align-items:center;z-index:45;box-shadow:0 -4px 18px rgba(168,80,26,.1)}
-@media(max-width:820px){.dl-bar{left:0}}
-.dl-bar span{font-size:.8rem;color:var(--muted);font-weight:700;flex:1}
-.dl-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:.8rem;font-weight:700;cursor:pointer;border:none;transition:.15s;font-family:'Hind Siliguri',sans-serif}
-.dl-btn.primary{background:var(--maroon);color:#fff}
-.dl-btn.primary:hover{background:var(--maroon-dark)}
-.dl-btn.green{background:var(--green);color:#fff}
-.dl-btn.green:hover{background:var(--green-2)}
-.dl-btn.blue{background:#2b6cb0;color:#fff}
-.dl-btn.blue:hover{background:#1e4e8c}
-.content{padding-bottom:56px}
-</style>
-<div class="dl-bar" id="dlBar">
-  <span><i class="fa-solid fa-download"></i> আপডেট করা ফাইল ডাউনলোড:</span>
-  <button class="dl-btn primary" onclick="copyFileContent('index')"><i class="fa-solid fa-file-code"></i> index.html কপি</button>
-  <button class="dl-btn green" onclick="copyFileContent('admin')"><i class="fa-solid fa-file-shield"></i> admin.html কপি</button>
-  <button class="dl-btn blue" onclick="copyFileContent('server')"><i class="fa-brands fa-node-js"></i> server.js কপি</button>
-</div>
-<script>
-async function copyFileContent(type){
-  const API_URL = window.BISHASH_ADMIN_API || 'https://bishash-1.onrender.com';
-  try{
-    const r = await fetch(API_URL+'/api/files/'+type, {headers:{Authorization:'Bearer '+localStorage.getItem('bh_token')||''}});
-    if(!r.ok) throw new Error('ফাইল সার্ভার পাওয়া যায়নি। সার্ভারে /api/files/:type এন্ডপয়েন্ট যোগ করুন।');
-    const text = await r.text();
-    await navigator.clipboard.writeText(text);
-    toast(type+' কপি হয়েছে ক্লিপবোর্ডে!');
-  }catch(e){
-    toast('ত্রুটি: '+e.message, true);
-  }
+.float-save-btn{
+  position:fixed; bottom:26px; right:26px; z-index:120;
+  display:none; align-items:center; gap:8px;
+  padding:14px 24px; border-radius:50px; border:none; cursor:pointer;
+  background:var(--green); color:#fff; font-weight:700; font-size:.9rem;
+  font-family:'Hind Siliguri',sans-serif;
+  box-shadow:0 10px 26px rgba(43,24,16,.28);
+  transition:transform .15s, box-shadow .15s;
+  animation:floatSaveIn .25s ease;
 }
-</script>
+.float-save-btn.show{display:inline-flex}
+.float-save-btn:hover{transform:translateY(-2px); box-shadow:0 14px 30px rgba(43,24,16,.34)}
+.float-save-btn i{font-size:1rem}
+@keyframes floatSaveIn{from{opacity:0; transform:translateY(14px)}to{opacity:1; transform:translateY(0)}}
+@media(max-width:820px){.float-save-btn{right:16px; bottom:16px; padding:12px 18px}}
+</style>
+<button class="float-save-btn" id="floatSaveBtn" onclick="saveContent()">
+  <i class="fa-solid fa-floppy-disk"></i>সব সেভ করুন
+</button>
 </body>
 </html>
