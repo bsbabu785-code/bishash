@@ -170,7 +170,8 @@ const contentSchema = new mongoose.Schema({
     gaEnabled: { type: Boolean, default: false },
     fbPixelId: String,
   },
-}, { timestamps: true });
+  landing: { type: mongoose.Schema.Types.Mixed, default: {} },
+}, { timestamps: true, minimize: false });
 
 const Review           = mongoose.model('Review', reviewSchema);
 const Order            = mongoose.model('Order',  orderSchema);
@@ -297,7 +298,13 @@ app.get('/api/content', async (_req, res, next) => {
 });
 app.put('/api/content', auth, requireDb, async (req, res, next) => {
   try {
-    const c = await Content.findOneAndUpdate({ key: 'main' }, req.body, { new: true, upsert: true });
+    const c = await Content.findOneAndUpdate(
+      { key: 'main' },
+      { $set: req.body },
+      { new: true, upsert: true }
+    );
+    // Mixed types must be marked when using findOneAndUpdate; ensure via extra save:
+    if (req.body.landing) { c.landing = req.body.landing; c.markModified('landing'); await c.save(); }
     res.json(c);
   } catch (e) { next(e); }
 });
