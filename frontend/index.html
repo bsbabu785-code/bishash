@@ -1075,14 +1075,14 @@
 
 <section class="benefits">
   <div class="container">
-    <h2 class="section-title">হালুয়ার উপকারিতা</h2>
-    <p class="section-sub">নিয়মিত বিশ্বাস হালুয়া খেলে যেসব উপকার পাওয়া যায়:</p>
+    <h2 class="section-title" data-bh="benefitsTitle">হালুয়ার উপকারিতা</h2>
+    <p class="section-sub" data-bh="benefitsSubtitle">নিয়মিত বিশ্বাস হালুয়া খেলে যেসব উপকার পাওয়া যায়:</p>
     <div class="benefits-grid">
       <div class="benefits-img">
         <img src="assets/maie2.png" alt="বিশ্বাস হালুয়ার উপকারিতা">
       </div>
       <div class="benefits-list">
-        <ul>
+        <ul id="benefitsUl">
           <li><span class="tick"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>দ্রুত শরীরে শক্তি জোগাতে সাহায্য করে</li>
           <li><span class="tick"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>হৃদযন্ত্র সুস্থ রাখতে সহায়ক</li>
           <li><span class="tick"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>হজমশক্তি উন্নত করে</li>
@@ -1113,7 +1113,7 @@
         <span class="orbit-dot" style="top:78%;left:92%;width:6px;height:6px;"></span>
         <span class="orbit-dot" style="top:92%;left:20%;width:5px;height:5px;"></span>
 
-        <div class="orbit-center"><img src="assets/logo.png" alt="বিশ্বাস"></div>
+        <div class="orbit-center"><img id="orbitCenterImg" src="assets/logo.png" alt="বিশ্বাস"></div>
 
         <div class="orbit-spinner">
           <div class="orbit-node n1" style="transform:translate(0px,-165px);">
@@ -1175,13 +1175,13 @@
     </div>
 
     <div class="orbit-copy">
-      <span class="eyebrow">
+      <span class="eyebrow" id="orbitTag">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.6 4.3L18.6 22 12 17.3 5.4 22l2.2-8.7L2 9h7z"/></svg>
-        আমাদের প্রতিশ্রুতি
+        <span id="orbitTagTxt">আমাদের প্রতিশ্রুতি</span>
       </span>
-      <h2>সহজেই বেছে নিন খাঁটি ও নির্ভরযোগ্য হালুয়া</h2>
-      <p><strong>উপকরণ বাছাই</strong> থেকে শুরু করে <strong>হাতে প্যাকেজিং</strong> পর্যন্ত — প্রতিটি ধাপে আমরা মান নিশ্চিত করি, যাতে আপনি নিশ্চিন্তে অর্ডার করতে পারেন। আমাদের বিশ্বাস হালুয়ায় ব্যবহৃত হয়:</p>
-      <div class="orbit-stats">
+      <h2 id="orbitTitle">সহজেই বেছে নিন খাঁটি ও নির্ভরযোগ্য হালুয়া</h2>
+      <p id="orbitDesc"><strong>উপকরণ বাছাই</strong> থেকে শুরু করে <strong>হাতে প্যাকেজিং</strong> পর্যন্ত — প্রতিটি ধাপে আমরা মান নিশ্চিত করি, যাতে আপনি নিশ্চিন্তে অর্ডার করতে পারেন। আমাদের বিশ্বাস হালুয়ায় ব্যবহৃত হয়:</p>
+      <div class="orbit-stats" id="orbitStatsWrap">
         <div>
           <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg></div>
           <div><div class="num">9+</div><div class="label">প্রিমিয়াম<br>উপকরণ</div></div>
@@ -1196,7 +1196,7 @@
         </div>
       </div>
       <a href="#order" class="btn btn-outline-maroon">
-        বিস্তারিত জানুন
+        <span id="orbitCta">বিস্তারিত জানুন</span>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
     </div>
@@ -1205,10 +1205,12 @@
 
 <section class="compare">
   <div class="container">
+    <h2 class="section-title" id="cmpTitle" style="display:none"></h2>
+    <p class="section-sub" id="cmpSub" style="display:none"></p>
     <div class="compare-grid">
       <div class="compare-col ours">
-        <h3>আমাদের হালুয়া</h3>
-        <ul>
+        <h3 id="cmpOursHead">আমাদের হালুয়া</h3>
+        <ul id="cmpOursList">
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>খাঁটি গাওয়া ঘি, জাফরান, মধু, পেস্তা, কাজুবাদাম, কাঠবাদাম, কিশমিশ, খেজুর ও এলাচ গুঁড়া দিয়ে তৈরি</li>
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>কোনো কৃত্রিম রঙ বা ফ্লেভার ব্যবহার করা হয় না</li>
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>ঘি ও প্রাকৃতিক উপকরণে ঐতিহ্যবাহী পদ্ধতিতে প্রস্তুত</li>
@@ -1219,8 +1221,8 @@
         <div class="card"><img src="assets/mane3.png" alt="বিশ্বাস হালুয়া"></div>
       </div>
       <div class="compare-col theirs">
-        <h3>বাজারের অন্যান্য হালুয়া</h3>
-        <ul>
+        <h3 id="cmpTheirsHead">বাজারের অন্যান্য হালুয়া</h3>
+        <ul id="cmpTheirsList">
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>কৃত্রিম রঙ ও ফ্লেভার ব্যবহার করা হয়</li>
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>ভেজাল ঘি বা পাম অয়েল ব্যবহারের আশঙ্কা থাকে</li>
           <li><span class="mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>প্রিজারভেটিভ মেশানো থাকে</li>
@@ -1232,7 +1234,7 @@
 </section>
 
 <section class="stats">
-  <div class="container">
+  <div class="container" id="mainStatsWrap">
     <div><div class="num">6,000+</div><div class="label">6 হাজার+ মানুষের ভালোবাসা পেয়েছে।</div></div>
     <div><div class="num">1+</div><div class="label">এক বছরেরও বেশি নিরলস সেবা।</div></div>
     <div><div class="num">90%</div><div class="label">90% সন্তুষ্ট গ্রাহকের আস্থা আমাদের শক্তি</div></div>
@@ -1242,11 +1244,13 @@
 <section class="faq">
   <div class="container">
     <div class="faq-box">
-      <div class="faq-head">
+      <div class="faq-head" id="faqHead">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#a8501a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        সাধারণ জিজ্ঞাসা
+        <span id="faqHeadTxt">সাধারণ জিজ্ঞাসা</span>
       </div>
+      <p class="section-sub" id="faqSub" style="display:none;text-align:center;margin-bottom:16px"></p>
 
+      <div id="faqItemsWrap">
       <div class="faq-item open">
         <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">ডেলিভারির চার্জ কত? <span class="chev"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></div>
         <div class="faq-a"><p>ঢাকার ভিতরে 70 টাকা, ঢাকার বাইরে 110 টাকা।</p></div>
@@ -1263,13 +1267,15 @@
         <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">আপনারা কি প্যানে ডেলিভারি দেন? <span class="chev"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></div>
         <div class="faq-a"><p>জি, আমরা সারা বাংলাদেশে কুরিয়ার সার্ভিসের মাধ্যমে ডেলিভারি দিয়ে থাকি।</p></div>
       </div>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="reviews">
   <div class="container">
-    <h2 class="section-title">কাস্টমার রিভিউ</h2>
+    <h2 class="section-title" data-bh="reviewsTitle">কাস্টমার রিভিউ</h2>
+    <p class="section-sub" data-bh="reviewsSubtitle" style="display:none"></p>
     <div class="review-slider">
       <button class="review-nav" id="reviewPrev" onclick="slideReviews(-1)" aria-label="আগের রিভিউ">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1418,7 +1424,8 @@
 
 <section class="order" id="order">
   <div class="container">
-    <div class="order-title">অর্ডার করতে নিচের ফর্মটি পূরণ করুন</div>
+    <div class="order-title" data-bh="orderFormTitle">অর্ডার করতে নিচের ফর্মটি পূরণ করুন</div>
+    <div class="order-hint" data-bh="orderHint" style="display:none;text-align:center;color:var(--muted);margin-top:-10px;margin-bottom:16px"></div>
 
     <div class="package-select">
       <h3>প্রোডাক্ট সিলেক্ট করুন</h3>
@@ -1550,7 +1557,7 @@
 
           <div class="pay-detail cod-detail active" id="panelCod">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>পণ্য হাতে পেয়ে টাকা পরিশোধ করুন</span>
+            <span data-bh="orderCod">পণ্য হাতে পেয়ে টাকা পরিশোধ করুন</span>
           </div>
         </div>
 
@@ -1558,7 +1565,7 @@
 
         <a href="#" class="btn btn-red place-order" id="placeOrderBtn" onclick="return placeOrder(event)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-          অর্ডার করুন <span id="placeOrderPrice">৳ 1,270</span>
+          <span data-bh="orderBtn">অর্ডার করুন</span> <span id="placeOrderPrice">৳ 1,270</span>
         </a>
       </div>
     </div>
@@ -2045,4 +2052,3 @@
 </html>
 </body>
 </html>
-
