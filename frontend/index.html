@@ -1617,6 +1617,7 @@
     });
 
     updateOrderSummary();
+    if(window.scheduleIncompleteSave) window.scheduleIncompleteSave();
   }
 
   function stepQty(evt, weight, delta){
@@ -1629,6 +1630,7 @@
     document.getElementById('qtyMinus' + weight).disabled = qtyByWeight[weight] <= 1;
     document.getElementById('qtyPlus' + weight).disabled = qtyByWeight[weight] >= MAX_QTY;
     updateOrderSummary();
+    if(window.scheduleIncompleteSave) window.scheduleIncompleteSave();
   }
 
   function getShippingCost(){
@@ -1672,6 +1674,7 @@
 
     document.getElementById(tabIds[method]).classList.add('active');
     document.getElementById(panelIds[method]).classList.add('active');
+    if(window.scheduleIncompleteSave) window.scheduleIncompleteSave();
   }
 
   function placeOrder(evt){
@@ -2140,38 +2143,73 @@
 
   // ---------- Incomplete order capture ----------
   let __incTimer = null;
+  let __incDirty = false; // true when there's a debounced save that hasn't been sent yet
+
+  function buildIncompletePayload(){
+    const name = (($('#custName')||{}).value||'').trim();
+    const address = (($('#custAddress')||{}).value||'').trim();
+    const mobile = (($('#custMobile')||{}).value||'').trim();
+    // save only if user filled at least name or mobile
+    if(!mobile && !name) return null;
+    const w = window.selectedWeight || '1000';
+    const qty = (window.qtyByWeight||{})[w] || 1;
+    const WLABELS = window.WEIGHT_LABELS || {'500':'500 গ্রাম','1000':'1 কেজি'};
+    return {
+      sessionId: SID,
+      customerName: name, phone: mobile, address: address,
+      weight: WLABELS[w] || w, quantity: qty,
+      paymentMethod: window.selectedPayment || 'cod',
+    };
+  }
+
+  function sendIncomplete(body){
+    // keepalive:true keeps the request alive even if the page is being navigated away from/closed.
+    // NOTE: this app's frontend and API are on different domains (cross-origin). We intentionally do NOT
+    // use navigator.sendBeacon here — sendBeacon with a JSON body triggers a CORS preflight, and when that
+    // preflight is still in flight at the moment the page is torn down, the browser silently drops the
+    // beacon with no error at all. fetch(..., {keepalive:true}) is the correct cross-origin-safe replacement:
+    // it completes the CORS preflight + POST as a detached background request even past page unload.
+    try{
+      fetch(API+'/api/incomplete-orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), keepalive:true}).catch(()=>{});
+    }catch(e){}
+  }
+
   function scheduleIncompleteSave(){
+    __incDirty = true;
     clearTimeout(__incTimer);
-    __incTimer = setTimeout(async ()=>{
-      const name = (($('#custName')||{}).value||'').trim();
-      const address = (($('#custAddress')||{}).value||'').trim();
-      const mobile = (($('#custMobile')||{}).value||'').trim();
-      // save only if user filled at least name+mobile OR mobile alone
-      if(!mobile && !name) return;
-      const w = window.selectedWeight || '1000';
-      const qty = (window.qtyByWeight||{})[w] || 1;
-      const WLABELS = window.WEIGHT_LABELS || {'500':'500 গ্রাম','1000':'1 কেজি'};
-      const body = {
-        sessionId: SID,
-        customerName: name, phone: mobile, address: address,
-        weight: WLABELS[w] || w, quantity: qty,
-        paymentMethod: window.selectedPayment || 'cod',
-      };
-      try{
-        await fetch(API+'/api/incomplete-orders', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
-      }catch(e){}
+    __incTimer = setTimeout(()=>{
+      __incDirty = false;
+      const body = buildIncompletePayload();
+      if(body) sendIncomplete(body);
     }, 1200);
   }
+
+  // Send immediately (skip the debounce wait) — used when the user is about to leave the page,
+  // so the latest keystrokes aren't lost to the pending 1200ms timer.
+  function flushIncompleteSave(){
+    if(!__incDirty) return;
+    clearTimeout(__incTimer);
+    __incDirty = false;
+    const body = buildIncompletePayload();
+    if(!body) return;
+    sendIncomplete(body);
+  }
+
+  window.scheduleIncompleteSave = scheduleIncompleteSave;
+
   function hookIncompleteCapture(){
     ['custName','custAddress','custMobile'].forEach(id=>{
       const el = document.getElementById(id);
       if(el){ el.addEventListener('input', scheduleIncompleteSave); el.addEventListener('blur', scheduleIncompleteSave); }
     });
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushIncompleteSave(); });
+    window.addEventListener('pagehide', flushIncompleteSave);
   }
 
   // ---------- Reset order form after a successful order ----------
   function resetOrderForm(){
     clearTimeout(__incTimer);
+    __incDirty = false;
     ['custName','custAddress','custMobile','bkashTrxId','nagadTrxId'].forEach(id=>{
       const el = document.getElementById(id); if(el) el.value = '';
     });
