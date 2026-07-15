@@ -602,6 +602,21 @@ app.get('/api/reports/sales', auth, requireDb, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---------- File download (serve updated site files) ----------
+// Place updated index.html / admin.html / server.js in a 'public' folder next to server.js
+// Admin panel download bar uses these endpoints.
+const FILE_DIR = process.env.FILES_DIR || path.join(__dirname, 'public');
+app.get('/api/files/:name', requireAuth, (req, res) => {
+  const allowed = { 'index.html': 'text/html', 'admin.html': 'text/html', 'server.js': 'application/javascript' };
+  const name = req.params.name;
+  if (!allowed[name]) return res.status(404).json({ error: 'File not found' });
+  const filePath = path.join(FILE_DIR, name);
+  if (!require('fs').existsSync(filePath)) return res.status(404).json({ error: 'File not found on server. Place updated files in /public folder.' });
+  res.setHeader('Content-Type', allowed[name]);
+  res.setHeader('Content-Disposition', 'attachment; filename="' + name + '"');
+  res.sendFile(filePath);
+});
+
 // ---------- 404 + errors ----------
 app.use((req, res) => res.status(404).json({ error: 'Not found', path: req.path }));
 app.use((err, _req, res, _next) => {
