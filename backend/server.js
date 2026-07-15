@@ -5,7 +5,9 @@
  * সরানো: Coupon endpoints (আর দরকার নেই)।
  */
 
-require('dotenv').config();
+try { require('dotenv').config(); } catch(e) {}   // optional on Render (env vars set in dashboard)
+const path        = require('path');
+const fs          = require('fs');
 const express     = require('express');
 const cors        = require('cors');
 const mongoose    = require('mongoose');
