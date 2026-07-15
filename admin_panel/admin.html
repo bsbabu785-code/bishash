@@ -959,6 +959,7 @@ $('oSearch').addEventListener('keypress',e=>{if(e.key==='Enter')loadOrders()});
 $('oStatus').addEventListener('change',loadOrders);
 function editOrder(o){
   __currentOrder=o;
+  __incFromId=null;
   $('oId').value=o._id;$('oOrderId').value=o.orderId||'';$('oStat').value=o.status||'pending';
   $('oName').value=o.customerName||'';$('oPhone').value=o.phone||'';$('oAddr').value=o.address||'';
   $('oProd').value=o.product||'';$('oWeight').value=o.weight||'';$('oQty').value=o.quantity||1;
@@ -973,8 +974,21 @@ async function saveOrder(){
       product:$('oProd').value,weight:$('oWeight').value,quantity:+$('oQty').value,productPrice:+$('oPrice').value,
       deliveryCharge:+$('oDel').value,totalAmount:+$('oTotal').value,paymentMethod:$('oPay').value,transactionId:$('oTrx').value,note:$('oNote').value,
       trackingNote:$('oTrkNote').value};
-    await api('/api/orders/'+$('oId').value,{method:'PUT',body:JSON.stringify(body)});
-    toast('আপডেট হয়েছে'); closeModal('mOrder'); loadOrders();
+    const id=$('oId').value;
+    if(id){
+      await api('/api/orders/'+id,{method:'PUT',body:JSON.stringify(body)});
+      toast('আপডেট হয়েছে');
+    }else{
+      if(!body.customerName||!body.phone||!body.address){toast('নাম, ফোন ও ঠিকানা আবশ্যক',true);return}
+      await api('/api/orders',{method:'POST',body:JSON.stringify(body)});
+      toast('অর্ডার তৈরি হয়েছে');
+      if(__incFromId){
+        api('/api/incomplete-orders/'+__incFromId,{method:'PATCH',body:JSON.stringify({confirmed:true,contactedAt:new Date()})}).catch(()=>{});
+        __incFromId=null;
+        loadIncomplete();
+      }
+    }
+    closeModal('mOrder'); loadOrders();
   }catch(e){toast(e.message,true)}
 }
 async function delOrder(id){if(!confirm('ডিলিট করবেন?'))return;try{await api('/api/orders/'+id,{method:'DELETE'});toast('ডিলিট');loadOrders()}catch(e){toast(e.message,true)}}
@@ -993,10 +1007,35 @@ async function loadIncomplete(){
       <td><div class="actions">
         ${o.phone?`<a class="act call" href="tel:${esc(o.phone)}"><i class="fa-solid fa-phone"></i></a>`:''}
         ${o.phone?`<a class="act" style="background:#25d366;color:#fff" href="https://wa.me/${(o.phone||'').replace(/^0/,'88')}" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>`:''}
-        <button class="act" onclick="markContacted('${o._id}')"><i class="fa-solid fa-check"></i></button>
+        <button class="act" title="অর্ডারে রূপান্তর করুন" onclick='approveIncomplete(${JSON.stringify(o).replace(/'/g,"&#39;")})'><i class="fa-solid fa-check"></i></button>
         <button class="act del" onclick="delInc('${o._id}')"><i class="fa-solid fa-trash"></i></button>
       </div></td></tr>`).join(''):`<tr><td colspan="7" class="empty">কোনো ইনকমপ্লিট অর্ডার নেই</td></tr>`;
   }catch(e){toast(e.message,true)}
+}
+// শুধু "confirmed" ফ্ল্যাগ সেট করলে অর্ডার তৈরি হতো না — এখন এটি অর্ডার মোডাল খুলে দেয়,
+// যেখানে দাম/ডেলিভারি চার্জ বসিয়ে সেভ করলে আসল অর্ডার তৈরি হয় এবং ইনকমপ্লিট এন্ট্রি কনফার্ম হয়ে যায়।
+let __incFromId=null;
+function approveIncomplete(o){
+  __currentOrder=null;
+  __incFromId=o._id;
+  $('oId').value='';
+  $('oOrderId').value='(সেভ করলে তৈরি হবে)';
+  $('oStat').value='confirmed';
+  $('oName').value=o.customerName||'';
+  $('oPhone').value=o.phone||'';
+  $('oAddr').value=o.address||'';
+  $('oProd').value='বিশ্বাস হালুয়া';
+  $('oWeight').value=o.weight||'';
+  $('oQty').value=o.quantity||1;
+  $('oPrice').value=0;
+  $('oDel').value=0;
+  $('oTotal').value=0;
+  $('oPay').value=o.paymentMethod||'cod';
+  $('oTrx').value='';
+  $('oNote').value=o.note||'';
+  $('oTrkNote').value='ফোনে কথা বলে কনফার্ম করা হয়েছে (ইনকমপ্লিট অর্ডার থেকে)';
+  $('oTrkHist').innerHTML='<div style="color:var(--muted);font-size:.82rem">নতুন অর্ডার — দাম/ডেলিভারি চার্জ বসিয়ে সেভ করুন</div>';
+  openModal('mOrder');
 }
 async function markContacted(id){try{await api('/api/incomplete-orders/'+id,{method:'PATCH',body:JSON.stringify({confirmed:true,contactedAt:new Date()})});toast('কনফার্ম');loadIncomplete()}catch(e){toast(e.message,true)}}
 async function delInc(id){if(!confirm('ডিলিট?'))return;try{await api('/api/incomplete-orders/'+id,{method:'DELETE'});toast('ডিলিট');loadIncomplete()}catch(e){toast(e.message,true)}}
@@ -1066,37 +1105,22 @@ let __repData=null;
 async function loadReports(){
   try{
     const from=$('repFrom').value, to=$('repTo').value, groupBy=$('repGroup').value;
-    const qs=new URLSearchParams();if(from)qs.set('from',from);if(to)qs.set('to',to);qs.set('groupBy',groupBy);
+    const qs=new URLSearchParams();if(from)qs.set('from',from);if(to)qs.set('to',to);qs.set('groupBy',groupBy);qs.set('status','delivered');
+    // Backend does the date filtering/grouping (in Bangladesh local days) and the delivered-only
+    // sales aggregation in one pass, so the numbers here always match what's actually stored.
     const r=await api('/api/reports/sales?'+qs.toString());
-    // Also fetch orders to filter delivered-only totals client-side
-    const allOrders=await api('/api/orders?status=all');
-    let filtered=allOrders.filter(o=>o.status==='delivered');
-    if(from){const f=new Date(from);filtered=filtered.filter(o=>new Date(o.createdAt)>=f)}
-    if(to){const t=new Date(to);t.setDate(t.getDate()+1);filtered=filtered.filter(o=>new Date(o.createdAt)<t)}
-    const totalSales=filtered.reduce((a,o)=>a+(o.totalAmount||0),0);
-    const totalDel=filtered.reduce((a,o)=>a+(o.deliveryCharge||0),0);
-    const totalOrd=filtered.length;
-    __repData={byDay:{},byPayment:{},totalSales,totalDel,totalOrd,all:filtered};
-    filtered.forEach(o=>{
-      const key=groupBy==='month'?(o.createdAt||'').slice(0,7):(o.createdAt||'').slice(0,10);
-      __repData.byDay[key]=__repData.byDay[key]||{orders:0,sales:0};
-      __repData.byDay[key].orders++; __repData.byDay[key].sales+=o.totalAmount||0;
-      const p=o.paymentMethod||'unknown';
-      __repData.byPayment[p]=__repData.byPayment[p]||{count:0,sales:0};
-      __repData.byPayment[p].count++; __repData.byPayment[p].sales+=o.totalAmount||0;
-    });
-    $('rTotOrd').textContent=totalOrd;
-    $('rTotSale').textContent=fmt(totalSales);
-    $('rTotDel').textContent=fmt(totalDel);
-    $('rAvg').textContent=fmt(totalOrd?Math.round(totalSales/totalOrd):0);
+    __repData={byDay:{},byPayment:{},totalSales:r.totalSales||0,totalDel:r.totalDelivery||0,totalOrd:r.totalOrders||0};
+    (r.byDay||[]).forEach(d=>{ __repData.byDay[d._id]={orders:d.orders,sales:d.sales}; });
+    (r.byPayment||[]).forEach(p=>{ __repData.byPayment[p._id||'unknown']={count:p.count,sales:p.sales}; });
+    $('rTotOrd').textContent=__repData.totalOrd;
+    $('rTotSale').textContent=fmt(__repData.totalSales);
+    $('rTotDel').textContent=fmt(__repData.totalDel);
+    $('rAvg').textContent=fmt(__repData.totalOrd?Math.round(__repData.totalSales/__repData.totalOrd):0);
     const day=Object.entries(__repData.byDay).sort();
     $('repDayTbody').innerHTML=day.length?day.map(([k,v])=>`<tr><td>${k}</td><td>${v.orders}</td><td>${fmt(v.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
-    // Status table (all orders in date range)
-    let allInRange=allOrders;
-    if(from){const f=new Date(from);allInRange=allInRange.filter(o=>new Date(o.createdAt)>=f)}
-    if(to){const t=new Date(to);t.setDate(t.getDate()+1);allInRange=allInRange.filter(o=>new Date(o.createdAt)<t)}
-    const byStatus={};allInRange.forEach(o=>{const s=o.status||'pending';byStatus[s]=byStatus[s]||{count:0,sales:0};byStatus[s].count++;byStatus[s].sales+=o.totalAmount||0});
-    $('repStTbody').innerHTML=Object.keys(byStatus).length?Object.entries(byStatus).map(([k,v])=>`<tr><td><span class="badge ${k}">${k}</span></td><td>${v.count}</td><td>${fmt(v.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
+    // Status table always reflects every status within the date range (server already scopes this to `match`, not `salesMatch`)
+    const byStatus=r.byStatus||[];
+    $('repStTbody').innerHTML=byStatus.length?byStatus.map(s=>`<tr><td><span class="badge ${s._id}">${s._id||'-'}</span></td><td>${s.count}</td><td>${fmt(s.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
     const pay=Object.entries(__repData.byPayment);
     $('repPayTbody').innerHTML=pay.length?pay.map(([k,v])=>`<tr><td>${k.toUpperCase()}</td><td>${v.count}</td><td>${fmt(v.sales)}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">ডেটা নেই</td></tr>';
   }catch(e){toast(e.message,true)}

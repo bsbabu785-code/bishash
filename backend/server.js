@@ -356,8 +356,10 @@ async function upsertCustomer(o) {
 
 app.post('/api/orders', requireDb, async (req, res, next) => {
   try {
-    const payload = { ...req.body, orderId: generateOrderId(),
-      tracking: [{ status: 'pending', note: 'অর্ডার প্লেস হয়েছে', at: new Date() }] };
+    const initialStatus = req.body.status || 'pending';
+    const payload = { ...req.body, orderId: generateOrderId(), status: initialStatus,
+      tracking: [{ status: initialStatus, note: req.body.trackingNote || 'অর্ডার প্লেস হয়েছে', at: new Date() }] };
+    delete payload.trackingNote;
     const order = await Order.create(payload);
     await upsertCustomer(order.toObject());
 
@@ -572,28 +574,38 @@ app.delete('/api/offers/:id', auth, requireDb, async (req, res, next) => {
 });
 
 // ---------- Reports ----------
+const REPORT_TZ = '+06:00'; // Asia/Dhaka (no DST) — keeps "date" filters/grouping aligned to local calendar days
 app.get('/api/reports/sales', auth, requireDb, async (req, res, next) => {
   try {
-    const { from, to, groupBy } = req.query;
+    const { from, to, groupBy, status } = req.query;
     const match = {};
+    // from/to come in as plain "YYYY-MM-DD" from the admin panel's <input type="date">.
+    // Interpreting them as UTC (old behaviour) shifted the day boundary by 6 hours and
+    // silently dropped/misplaced orders near midnight BD time. Anchor them to Dhaka time instead.
     if (from || to) match.createdAt = {};
-    if (from) match.createdAt.$gte = new Date(from);
-    if (to)   match.createdAt.$lte = new Date(new Date(to).setHours(23,59,59,999));
+    if (from) match.createdAt.$gte = new Date(from + 'T00:00:00.000' + REPORT_TZ);
+    if (to)   match.createdAt.$lte = new Date(to   + 'T23:59:59.999' + REPORT_TZ);
+
+    // Status breakdown should always reflect every order in the date range.
+    // Sales figures (byDay/byProduct/byPayment/totals) can optionally be scoped to one status
+    // (the admin report page shows Delivered-only sales by default).
+    const salesMatch = (status && status !== 'all') ? { ...match, status } : match;
+
     const fmt = groupBy === 'month' ? '%Y-%m' : '%Y-%m-%d';
     const [byDay, byStatus, byProduct, byPayment, totals] = await Promise.all([
       Order.aggregate([
-        { $match: match },
-        { $group: { _id: { $dateToString: { format: fmt, date: '$createdAt' } }, orders: { $sum: 1 }, sales: { $sum: '$totalAmount' } } },
+        { $match: salesMatch },
+        { $group: { _id: { $dateToString: { format: fmt, date: '$createdAt', timezone: REPORT_TZ } }, orders: { $sum: 1 }, sales: { $sum: '$totalAmount' } } },
         { $sort: { _id: 1 } },
       ]),
       Order.aggregate([{ $match: match }, { $group: { _id: '$status', count: { $sum: 1 }, sales: { $sum: '$totalAmount' } } }]),
       Order.aggregate([
-        { $match: match },
+        { $match: salesMatch },
         { $group: { _id: '$product', qty: { $sum: '$quantity' }, sales: { $sum: '$totalAmount' } } },
         { $sort: { sales: -1 } }, { $limit: 20 },
       ]),
-      Order.aggregate([{ $match: match }, { $group: { _id: '$paymentMethod', count: { $sum: 1 }, sales: { $sum: '$totalAmount' } } }]),
-      Order.aggregate([{ $match: match }, { $group: { _id: null, count: { $sum: 1 }, sales: { $sum: '$totalAmount' }, delivery: { $sum: '$deliveryCharge' } } }]),
+      Order.aggregate([{ $match: salesMatch }, { $group: { _id: '$paymentMethod', count: { $sum: 1 }, sales: { $sum: '$totalAmount' } } }]),
+      Order.aggregate([{ $match: salesMatch }, { $group: { _id: null, count: { $sum: 1 }, sales: { $sum: '$totalAmount' }, delivery: { $sum: '$deliveryCharge' } } }]),
     ]);
     res.json({
       totalOrders: totals[0]?.count || 0,
