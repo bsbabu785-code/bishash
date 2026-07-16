@@ -1493,8 +1493,8 @@
         <label>মোবাইল নম্বর লিখুন *<input type="text" id="custMobile" placeholder="11 সংখ্যার মোবাইল নম্বর" inputmode="numeric" maxlength="11"></label>
         <h4 style="margin:20px 0 10px;color:var(--ink);font-size:.95rem;">Shipping</h4>
         <div class="shipping">
-          <div class="row"><label><input type="radio" name="shipping" value="70" checked onchange="updateOrderSummary()">ঢাকার ভিতরে:</label><span>৳70</span></div>
-          <div class="row"><label><input type="radio" name="shipping" value="130" onchange="updateOrderSummary()">ঢাকার বাইরে:</label><span>৳130</span></div>
+          <div class="row"><label><input type="radio" name="shipping" value="70" onchange="updateOrderSummary()">ঢাকার ভিতরে:</label><span>৳70</span></div>
+          <div class="row"><label><input type="radio" name="shipping" value="130" checked onchange="updateOrderSummary()">ঢাকার বাইরে:</label><span>৳130</span></div>
         </div>
       </div>
       <div class="summary">
@@ -1502,7 +1502,7 @@
         <div class="row"><span>Product</span><span>Subtotal</span></div>
         <div class="row"><span id="productLine">বিশ্বাস হালুয়া (1 কেজি) × 1</span><span id="productLinePrice">৳ 1,200</span></div>
         <div class="row"><span>Subtotal</span><span id="subtotalPrice">৳ 1,200</span></div>
-        <div class="row total"><span>Total</span><span id="totalPrice">৳ 1,270</span></div>
+        <div class="row total"><span>Total</span><span id="totalPrice">৳ 1,330</span></div>
 
         <div class="pay-methods">
           <h4>Payment Method</h4>
@@ -1563,7 +1563,7 @@
 
         <a href="#" class="btn btn-red place-order" id="placeOrderBtn" onclick="return placeOrder(event)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-          অর্ডার করুন <span id="placeOrderPrice">৳ 1,270</span>
+          অর্ডার করুন <span id="placeOrderPrice">৳ 1,330</span>
         </a>
       </div>
     </div>
@@ -2229,9 +2229,10 @@
     ['custName','custAddress','custMobile','bkashTrxId','nagadTrxId'].forEach(id=>{
       const el = document.getElementById(id); if(el) el.value = '';
     });
-    // শিপিং ঢাকার ভিতরে-তে ফিরিয়ে দিন
-    const firstShip = document.querySelector('input[name="shipping"]');
-    if(firstShip) firstShip.checked = true;
+    // শিপিং ঢাকার বাইরে-তে ফিরিয়ে দিন (ডিফল্ট)
+    const shipInputs = document.querySelectorAll('input[name="shipping"]');
+    const defaultShip = shipInputs[1] || shipInputs[0];
+    if(defaultShip) defaultShip.checked = true;
     // পেমেন্ট মেথড COD-তে ফিরিয়ে দিন
     if(typeof selectPayment==='function') selectPayment('cod');
     // প্রোডাক্ট/পরিমাণ প্রথম প্যাকেজ ও ১-এ ফিরিয়ে দিন
